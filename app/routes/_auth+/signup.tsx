@@ -1,6 +1,5 @@
 import { conform, useForm } from '@conform-to/react'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
-import * as E from '@react-email/components'
 import {
 	json,
 	redirect,
@@ -9,160 +8,224 @@ import {
 } from '@remix-run/node'
 import { Form, useActionData, useSearchParams } from '@remix-run/react'
 import { HoneypotInputs } from 'remix-utils/honeypot/react'
+import { safeRedirect } from 'remix-utils/safe-redirect'
 import { z } from 'zod'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
-import { ErrorList, Field } from '#app/components/forms.tsx'
+import { CheckboxField, ErrorList, Field } from '#app/components/forms.tsx'
+import { Spacer } from '#app/components/spacer.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
-import {
-	ProviderConnectionForm,
-	providerNames,
-} from '#app/utils/connections.tsx'
+import { getUserId, sessionKey, signup } from '#app/utils/auth.server.ts'
+import { redirectWithConfetti } from '#app/utils/confetti.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
-import { sendEmail } from '#app/utils/email.server.ts'
 import { checkHoneypot } from '#app/utils/honeypot.server.ts'
 import { useIsPending } from '#app/utils/misc.tsx'
-import { EmailSchema } from '#app/utils/user-validation.ts'
-import { prepareVerification } from './verify.tsx'
+import { authSessionStorage } from '#app/utils/session.server.ts'
+import {
+	EmailSchema,
+	NameSchema,
+	PasswordAndConfirmPasswordSchema,
+	UsernameSchema,
+} from '#app/utils/user-validation.ts'
+import { verifySessionStorage } from '#app/utils/verification.server.ts'
 
-const SignupSchema = z.object({
-	email: EmailSchema,
-})
+const SignupFormSchema = z
+	.object({
+		username: UsernameSchema,
+		name: NameSchema,
+		email: EmailSchema,
+		agreeToTermsOfServiceAndPrivacyPolicy: z.boolean({
+			required_error:
+				'Deve confirmar o termo de serviço e a política de privacidade',
+		}),
+		remember: z.boolean().optional(),
+		redirectTo: z.string().optional(),
+	})
+	.and(PasswordAndConfirmPasswordSchema)
 
-export async function action({ request }: DataFunctionArgs) {
-	const formData = await request.formData()
+export const loader = async ({ request }: DataFunctionArgs) => {
+	const userId = await getUserId(request);
+	if (userId) return redirect("/");
+	return json({});
+  };
+  
+  export const action = async ({ request }: DataFunctionArgs) => {
+	const formData = await request.formData();
+	
 	checkHoneypot(formData)
 
 	const submission = await parse(formData, {
-		schema: SignupSchema.superRefine(async (data, ctx) => {
-			const existingUser = await prisma.user.findUnique({
-				where: { email: data.email },
-				select: { id: true },
-			})
-			if (existingUser) {
-				ctx.addIssue({
-					path: ['email'],
-					code: z.ZodIssueCode.custom,
-					message: 'A user already exists with this email',
+		schema: intent =>
+			SignupFormSchema.superRefine(async (data, ctx) => {
+				const existingUser = await prisma.user.findUnique({
+					where: { username: data.username },
+					select: { id: true },
 				})
-				return
-			}
-		}),
+				if (existingUser) {
+					ctx.addIssue({
+						path: ['username'],
+						code: z.ZodIssueCode.custom,
+						message: 'O usuário já existe',
+					})
+					return
+				}
+			}).transform(async data => {
+				if (intent !== 'submit') return { ...data, session: null }
+
+				const session = await signup({ ...data })
+				return { ...data, session }
+			}),
 		async: true,
 	})
 	if (submission.intent !== 'submit') {
 		return json({ status: 'idle', submission } as const)
 	}
-	if (!submission.value) {
+	if (!submission.value?.session) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
-	const { email } = submission.value
-	const { verifyUrl, redirectTo } = await prepareVerification({
-		period: 10 * 60,
-		request,
-		type: 'onboarding',
-		target: email,
-	})
 
-	const response = await sendEmail({
-		to: email,
-		subject: `Bem Vindo a Artesanatos da Zizi!`,
-		react: <SignupEmail onboardingUrl={verifyUrl.toString()} />,
-	})
+	const { session, remember, redirectTo } = submission.value
 
-	if (response.status === 'success') {
-		return redirect(redirectTo.toString())
-	} else {
-		submission.error[''] = [response.error.message]
-		return json({ status: 'error', submission } as const, { status: 500 })
-	}
-}
-
-export function SignupEmail({
-	onboardingUrl,
-}: {
-	onboardingUrl: string
-}) {
-	return (
-		<E.Html lang="en" dir="ltr">
-			<E.Container>
-				<h1>
-					<E.Text>Bem Vindo a Artesanatos da Zizi!</E.Text>
-				</h1>
-				<p>
-					<E.Text>Click para começar:</E.Text>
-				</p>
-				<E.Link href={onboardingUrl}>{onboardingUrl}</E.Link>
-			</E.Container>
-		</E.Html>
+	const authSession = await authSessionStorage.getSession(
+		request.headers.get('cookie'),
 	)
-}
+	authSession.set(sessionKey, session.id)
+	const verifySession = await verifySessionStorage.getSession()
+	const headers = new Headers()
+	headers.append(
+		'set-cookie',
+		await authSessionStorage.commitSession(authSession, {
+			expires: remember ? session.expirationDate : undefined,
+		}),
+	)
+	headers.append(
+		'set-cookie',
+		await verifySessionStorage.destroySession(verifySession),
+	)
 
-export const meta: MetaFunction = () => {
-	return [{ title: 'Sign Up | Artesanatos da Zizi' }]
-}
-
-export default function SignupRoute() {
+	return redirectWithConfetti(safeRedirect(redirectTo), { headers })
+  
+  };
+  
+  export const meta: MetaFunction = () => [{ title: "Sign Up" }];
+  
+  export default function Join() {
 	const actionData = useActionData<typeof action>()
 	const isPending = useIsPending()
 	const [searchParams] = useSearchParams()
 	const redirectTo = searchParams.get('redirectTo')
 
 	const [form, fields] = useForm({
-		id: 'signup-form',
-		constraint: getFieldsetConstraint(SignupSchema),
+		id: 'onboarding-form',
+		constraint: getFieldsetConstraint(SignupFormSchema),
+		defaultValue: { redirectTo },
 		lastSubmission: actionData?.submission,
 		onValidate({ formData }) {
-			const result = parse(formData, { schema: SignupSchema })
-			return result
+			return parse(formData, { schema: SignupFormSchema })
 		},
 		shouldRevalidate: 'onBlur',
 	})
 
 	return (
-		<div className="container flex flex-col justify-center pb-32 pt-20">
-			<div className="text-center">
-				<h1 className="text-h1">Let's start your journey!</h1>
-				<p className="mt-3 text-body-md text-muted-foreground">
-					Please enter your email.
-				</p>
-			</div>
-			<div className="mx-auto mt-16 min-w-[368px] max-w-sm">
-				<Form method="POST" {...form.props}>
+		<div className="container flex min-h-full flex-col justify-center pb-32 pt-20">
+			<div className="mx-auto w-full max-w-lg">
+				<div className="flex flex-col gap-3 text-center">
+					<h1 className="text-h1">Bem vindo!</h1>
+					<p className="text-body-md text-muted-foreground">
+						Informe os dados abaixo para registrar.
+					</p>
+				</div>
+				<Spacer size="xs" />
+				<Form
+					method="POST"
+					className="mx-auto min-w-[368px] max-w-sm"
+					{...form.props}
+				>
 					<HoneypotInputs />
 					<Field
-						labelProps={{
-							htmlFor: fields.email.id,
-							children: 'Email',
+						labelProps={{ htmlFor: fields.username.id, children: 'Username' }}
+						inputProps={{
+							...conform.input(fields.username),
+							autoComplete: 'username',
+							className: 'lowercase',
 						}}
-						inputProps={{ ...conform.input(fields.email), autoFocus: true }}
+						errors={fields.username.errors}
+					/>
+					<Field
+						labelProps={{ htmlFor: fields.name.id, children: 'Name' }}
+						inputProps={{
+							...conform.input(fields.name),
+							autoComplete: 'name',
+						}}
+						errors={fields.name.errors}
+					/>
+					<Field
+						labelProps={{ htmlFor: fields.email.id, children: 'Email' }}
+						inputProps={{
+							...conform.input(fields.email),
+							autoComplete: 'email',
+						}}
 						errors={fields.email.errors}
 					/>
+					<Field
+						labelProps={{ htmlFor: fields.password.id, children: 'Password' }}
+						inputProps={{
+							...conform.input(fields.password, { type: 'password' }),
+							autoComplete: 'new-password',
+						}}
+						errors={fields.password.errors}
+					/>
+
+					<Field
+						labelProps={{
+							htmlFor: fields.confirmPassword.id,
+							children: 'Confirm Password',
+						}}
+						inputProps={{
+							...conform.input(fields.confirmPassword, { type: 'password' }),
+							autoComplete: 'new-password',
+						}}
+						errors={fields.confirmPassword.errors}
+					/>
+
+					<CheckboxField
+						labelProps={{
+							htmlFor: fields.agreeToTermsOfServiceAndPrivacyPolicy.id,
+							children:
+								'Concorda com os Termos de Serviço e a Política de Privacidade?',
+						}}
+						buttonProps={conform.input(
+							fields.agreeToTermsOfServiceAndPrivacyPolicy,
+							{ type: 'checkbox' },
+						)}
+						errors={fields.agreeToTermsOfServiceAndPrivacyPolicy.errors}
+					/>
+					<CheckboxField
+						labelProps={{
+							htmlFor: fields.remember.id,
+							children: 'Lembrar-me',
+						}}
+						buttonProps={conform.input(fields.remember, { type: 'checkbox' })}
+						errors={fields.remember.errors}
+					/>
+
+					<input {...conform.input(fields.redirectTo, { type: 'hidden' })} />
 					<ErrorList errors={form.errors} id={form.errorId} />
-					<StatusButton
-						className="w-full"
-						status={isPending ? 'pending' : actionData?.status ?? 'idle'}
-						type="submit"
-						disabled={isPending}
-					>
-						Enviar
-					</StatusButton>
+
+					<div className="flex items-center justify-between gap-6">
+						<StatusButton
+							className="w-full"
+							status={isPending ? 'pending' : actionData?.status ?? 'idle'}
+							type="submit"
+							disabled={isPending}
+						>
+							Criar uma conta
+						</StatusButton>
+					</div>
 				</Form>
-				<ul className="mt-5 flex flex-col gap-5 border-b-2 border-t-2 border-border py-3">
-					{providerNames.map(providerName => (
-						<li key={providerName}>
-							<ProviderConnectionForm
-								type="Signup"
-								providerName={providerName}
-								redirectTo={redirectTo}
-							/>
-						</li>
-					))}
-				</ul>
 			</div>
 		</div>
 	)
-}
-
+}  
 export function ErrorBoundary() {
 	return <GeneralErrorBoundary />
 }

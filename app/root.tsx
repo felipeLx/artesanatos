@@ -25,7 +25,6 @@ import {
 } from '@remix-run/react'
 import { withSentry } from '@sentry/remix'
 import { useRef } from 'react'
-import { AuthenticityTokenProvider } from 'remix-utils/csrf/react'
 import { HoneypotProvider } from 'remix-utils/honeypot/react'
 import { z } from 'zod'
 import { Confetti } from './components/confetti.tsx'
@@ -45,10 +44,9 @@ import {
 import { Icon, href as iconsHref } from './components/ui/icon.tsx'
 import fontStyleSheetUrl from './styles/font.css'
 import tailwindStyleSheetUrl from './styles/tailwind.css'
-import { authenticator, getUserId } from './utils/auth.server.ts'
+import {  getUserId } from './utils/auth.server.ts'
 import { ClientHintCheck, getHints, useHints } from './utils/client-hints.tsx'
 import { getConfetti } from './utils/confetti.server.ts'
-import { csrf } from './utils/csrf.server.ts'
 import { prisma } from './utils/db.server.ts'
 import { getEnv } from './utils/env.server.ts'
 import { honeypot } from './utils/honeypot.server.ts'
@@ -91,7 +89,7 @@ export const links: LinksFunction = () => {
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
 	return [
 		{ title: data ? 'Artesanatos da Zizi' : 'Error | Artesanatos da Zizi' },
-		{ name: 'description', content: `Your own captain's log` },
+		{ name: 'description', content: `Artesanatos do Espírito Santo` },
 	]
 }
 
@@ -126,16 +124,10 @@ export async function loader({ request }: DataFunctionArgs) {
 				{ timings, type: 'find user', desc: 'find user in root' },
 		  )
 		: null
-	if (userId && !user) {
-		console.info('something weird happened')
-		// something weird happened... The user is authenticated but we can't find
-		// them in the database. Maybe they were deleted? Let's log them out.
-		await authenticator.logout(request, { redirectTo: '/' })
-	}
+	
 	const { toast, headers: toastHeaders } = await getToast(request)
 	const { confettiId, headers: confettiHeaders } = getConfetti(request)
 	const honeyProps = honeypot.getInputProps()
-	const [csrfToken, csrfCookieHeader] = await csrf.commitToken()
 
 	return json(
 		{
@@ -152,14 +144,12 @@ export async function loader({ request }: DataFunctionArgs) {
 			toast,
 			confettiId,
 			honeyProps,
-			csrfToken,
 		},
 		{
 			headers: combineHeaders(
 				{ 'Server-Timing': timings.toString() },
 				toastHeaders,
-				confettiHeaders,
-				csrfCookieHeader ? { 'set-cookie': csrfCookieHeader } : null,
+				confettiHeaders
 			),
 		},
 	)
@@ -289,11 +279,9 @@ function App() {
 function AppWithProviders() {
 	const data = useLoaderData<typeof loader>()
 	return (
-		<AuthenticityTokenProvider token={data.csrfToken}>
-			<HoneypotProvider {...data.honeyProps}>
-				<App />
-			</HoneypotProvider>
-		</AuthenticityTokenProvider>
+		<HoneypotProvider {...data.honeyProps}>
+			<App />
+		</HoneypotProvider>
 	)
 }
 
@@ -334,9 +322,9 @@ function UserDropdown() {
 						</Link>
 					</DropdownMenuItem>
 					<DropdownMenuItem asChild>
-						<Link prefetch="intent" to={`/users/${user.username}/notes`}>
+						<Link prefetch="intent" to={`/users/${user.username}/products`}>
 							<Icon className="text-body-md" name="pencil-2">
-								Notes
+								Products
 							</Icon>
 						</Link>
 					</DropdownMenuItem>

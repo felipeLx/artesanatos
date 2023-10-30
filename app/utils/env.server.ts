@@ -9,13 +9,7 @@ const schema = z.object({
 	HONEYPOT_SECRET: z.string(),
 	CACHE_DATABASE_PATH: z.string(),
 	// If you plan on using Sentry, uncomment this line
-	// SENTRY_DSN: z.string(),
-	// If you plan to use Resend, uncomment this line
-	// RESEND_API_KEY: z.string(),
-	// If you plan to use GitHub auth, remove the default:
-	GITHUB_CLIENT_ID: z.string().default('MOCK_GITHUB_CLIENT_ID'),
-	GITHUB_CLIENT_SECRET: z.string().default('MOCK_GITHUB_CLIENT_SECRET'),
-	GITHUB_TOKEN: z.string().default('MOCK_GITHUB_TOKEN'),
+	SENTRY_DSN: z.string(),
 })
 
 declare global {

@@ -21,7 +21,7 @@ export async function loader({ request }: DataFunctionArgs) {
 					contentType: true,
 				},
 			},
-			notes: {
+			products: {
 				include: {
 					images: {
 						select: {
@@ -50,11 +50,11 @@ export async function loader({ request }: DataFunctionArgs) {
 						url: `${domain}/resources/user-images/${user.image.id}`,
 				  }
 				: null,
-			notes: user.notes.map(note => ({
-				...note,
-				images: note.images.map(image => ({
+			products: user.products.map(product => ({
+				...product,
+				images: product.images.map(image => ({
 					...image,
-					url: `${domain}/resources/note-images/${image.id}`,
+					url: `${domain}/resources/product-images/${image.id}`,
 				})),
 			})),
 		},

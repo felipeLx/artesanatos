@@ -10,7 +10,6 @@ import { Button } from '#app/components/ui/button.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { requireUserId, sessionKey } from '#app/utils/auth.server.ts'
-import { validateCSRF } from '#app/utils/csrf.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import {
 	getUserImgSrc,
@@ -20,7 +19,6 @@ import {
 import { authSessionStorage } from '#app/utils/session.server.ts'
 import { redirectWithToast } from '#app/utils/toast.server.ts'
 import { NameSchema, UsernameSchema } from '#app/utils/user-validation.ts'
-import { twoFAVerificationType } from './profile.two-factor.tsx'
 
 export const handle: SEOHandle = {
 	getSitemapEntries: () => null,
@@ -53,11 +51,6 @@ export async function loader({ request }: DataFunctionArgs) {
 				},
 			},
 		},
-	})
-
-	const twoFactorVerification = await prisma.verification.findUnique({
-		select: { id: true },
-		where: { target_type: { type: twoFAVerificationType, target: userId } },
 	})
 
 	const password = await prisma.password.findUnique({

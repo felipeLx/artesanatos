@@ -1,5 +1,5 @@
 import { redirect, type DataFunctionArgs } from '@remix-run/node'
-import { authenticator, requireUserId } from '#app/utils/auth.server.ts'
+import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 
 export async function loader({ request }: DataFunctionArgs) {
@@ -11,7 +11,6 @@ export async function loader({ request }: DataFunctionArgs) {
 			['redirectTo', `${requestUrl.pathname}${requestUrl.search}`],
 		])
 		const redirectTo = `/login?${loginParams}`
-		await authenticator.logout(request, { redirectTo })
 		return redirect(redirectTo)
 	}
 	return redirect(`/users/${user.username}`)

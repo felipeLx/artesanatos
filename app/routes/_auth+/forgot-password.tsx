@@ -14,7 +14,6 @@ import { z } from 'zod'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { ErrorList, Field } from '#app/components/forms.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
-import { validateCSRF } from '#app/utils/csrf.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { sendEmail } from '#app/utils/email.server.ts'
 import { checkHoneypot } from '#app/utils/honeypot.server.ts'
@@ -27,7 +26,6 @@ const ForgotPasswordSchema = z.object({
 
 export async function action({ request }: DataFunctionArgs) {
 	const formData = await request.formData()
-	await validateCSRF(formData, request.headers)
 	checkHoneypot(formData)
 	const submission = await parse(formData, {
 		schema: ForgotPasswordSchema.superRefine(async (data, ctx) => {
@@ -44,7 +42,7 @@ export async function action({ request }: DataFunctionArgs) {
 				ctx.addIssue({
 					path: ['usernameOrEmail'],
 					code: z.ZodIssueCode.custom,
-					message: 'No user exists with this username or email',
+					message: 'Não existe usuário com esse nome ou senha',
 				})
 				return
 			}
@@ -64,7 +62,7 @@ export async function action({ request }: DataFunctionArgs) {
 		select: { email: true, username: true },
 	})
 
-	const { verifyUrl, redirectTo, otp } = await prepareVerification({
+	const { verifyUrl, redirectTo } = await prepareVerification({
 		period: 10 * 60,
 		request,
 		type: 'reset-password',
@@ -73,9 +71,9 @@ export async function action({ request }: DataFunctionArgs) {
 
 	const response = await sendEmail({
 		to: user.email,
-		subject: `Artesanatos da Zizi Password Reset`,
+		subject: `Artesanatos da Zizi: Atualizasr Senha`,
 		react: (
-			<ForgotPasswordEmail onboardingUrl={verifyUrl.toString()} otp={otp} />
+			<ForgotPasswordEmail onboardingUrl={verifyUrl.toString()} />
 		),
 	})
 
@@ -89,24 +87,17 @@ export async function action({ request }: DataFunctionArgs) {
 
 function ForgotPasswordEmail({
 	onboardingUrl,
-	otp,
 }: {
 	onboardingUrl: string
-	otp: string
 }) {
 	return (
 		<E.Html lang="en" dir="ltr">
 			<E.Container>
 				<h1>
-					<E.Text>Artesanatos da Zizi Password Reset</E.Text>
+					<E.Text>Artesanatos da Zizi: Renovar Senha</E.Text>
 				</h1>
 				<p>
-					<E.Text>
-						Here's your verification code: <strong>{otp}</strong>
-					</E.Text>
-				</p>
-				<p>
-					<E.Text>Or click the link:</E.Text>
+					<E.Text>Click no Link:</E.Text>
 				</p>
 				<E.Link href={onboardingUrl}>{onboardingUrl}</E.Link>
 			</E.Container>
@@ -115,7 +106,7 @@ function ForgotPasswordEmail({
 }
 
 export const meta: MetaFunction = () => {
-	return [{ title: 'Password Recovery for Artesanatos da Zizi' }]
+	return [{ title: 'Recuperar Senha | Artesanatos da Zizi' }]
 }
 
 export default function ForgotPasswordRoute() {
@@ -135,9 +126,9 @@ export default function ForgotPasswordRoute() {
 		<div className="container pb-32 pt-20">
 			<div className="flex flex-col justify-center">
 				<div className="text-center">
-					<h1 className="text-h1">Forgot Password</h1>
+					<h1 className="text-h1">Esqueceu Senha</h1>
 					<p className="mt-3 text-body-md text-muted-foreground">
-						No worries, we'll send you reset instructions.
+						Agora enviamos instruções.
 					</p>
 				</div>
 				<div className="mx-auto mt-16 min-w-[368px] max-w-sm">
@@ -148,7 +139,7 @@ export default function ForgotPasswordRoute() {
 							<Field
 								labelProps={{
 									htmlFor: fields.usernameOrEmail.id,
-									children: 'Username or Email',
+									children: 'Usuário ou Email',
 								}}
 								inputProps={{
 									autoFocus: true,
@@ -170,7 +161,7 @@ export default function ForgotPasswordRoute() {
 								type="submit"
 								disabled={forgotPassword.state !== 'idle'}
 							>
-								Recover password
+								Recuperação Senha
 							</StatusButton>
 						</div>
 					</forgotPassword.Form>
@@ -178,7 +169,7 @@ export default function ForgotPasswordRoute() {
 						to="/login"
 						className="mt-11 text-center text-body-sm font-bold"
 					>
-						Back to Login
+						Voltar para o Login
 					</Link>
 				</div>
 			</div>
