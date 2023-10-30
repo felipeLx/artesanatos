@@ -73,7 +73,7 @@ export async function action({ request }: DataFunctionArgs) {
 
 	const response = await sendEmail({
 		to: user.email,
-		subject: `Epic Notes Password Reset`,
+		subject: `Artesanatos da Zizi Password Reset`,
 		react: (
 			<ForgotPasswordEmail onboardingUrl={verifyUrl.toString()} otp={otp} />
 		),
@@ -98,7 +98,7 @@ function ForgotPasswordEmail({
 		<E.Html lang="en" dir="ltr">
 			<E.Container>
 				<h1>
-					<E.Text>Epic Notes Password Reset</E.Text>
+					<E.Text>Artesanatos da Zizi Password Reset</E.Text>
 				</h1>
 				<p>
 					<E.Text>
@@ -115,7 +115,7 @@ function ForgotPasswordEmail({
 }
 
 export const meta: MetaFunction = () => {
-	return [{ title: 'Password Recovery for Epic Notes' }]
+	return [{ title: 'Password Recovery for Artesanatos da Zizi' }]
 }
 
 export default function ForgotPasswordRoute() {

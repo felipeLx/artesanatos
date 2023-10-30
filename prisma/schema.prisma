@@ -10,43 +10,153 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model OrderStatus {
+  id       String  @id @default(cuid())
+  status   String
+
+  order   Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderId String?
+}
+
+model OrderFulfillmentStatus {
+  id       String  @id @default(cuid())
+  status   String
+
+  order   Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderId String?
+}
+
+model OrderPaymentStatus {
+  id       String  @id @default(cuid())
+  status   String
+
+  order   Order?   @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderId String?
+}
+
+model SwapFulfillmentStatus {
+  id       String  @id @default(cuid())
+  status   String
+
+  swap   Swap?   @relation(fields: [swapId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  swapId String?
+}
+
+model SwapPaymentStatus {
+  id       String  @id @default(cuid())
+  status   String
+
+  swap   Swap?   @relation(fields: [swapId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  swapId String?
+}
 model User {
   id       String  @id @default(cuid())
   email    String  @unique
   username String  @unique
   name     String?
+  stripeCustomerId String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   image       UserImage?
   password    Password?
-  notes       Note[]
+  address     Address[]
+  products    Product[]
   roles       Role[]
   sessions    Session[]
   connections Connection[]
+  cart Cart[]
+  order Order[]
 }
 
-model Note {
+model Address {
+  // address_id: A surrogate primary key used to uniquely identify each address in the table.
   id      String @id @default(cuid())
-  title   String
-  content String
-
+  // address: The first line of an address.
+  address String
+  // address2: An optional second line of an address.
+  address2 String?
+  // district: The region of an address, this may be a state, province, prefecture, etc.
+  state String
+  // city_id: A foreign key pointing to the city table.
+  city String
+  // postal_code: The postal code or ZIP code of the address (where applicable).
+  postalCode String
+  // phone: The telephone number for the address.
+  phone String
+  // last_update: When the row was created or most recently updated.
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  customer   User   @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  customerId String
+
+  cart Cart[]
+  payment Payment[]
+  order Order[]
+  swap Swap[]
+}
+
+model Product {
+  id      String @id @default(cuid())
+  title   String
+  description String
+  slug String
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime? @updatedAt
 
   owner   User   @relation(fields: [ownerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
   ownerId String
 
-  images NoteImage[]
-
+  productVariation ProductVariation[]
+  colorVariation ColorVariation[]
+  optionsVariation OptionsVariation[]
+  images ProductImage[]
+  
   // non-unique foreign key
   @@index([ownerId])
   // This helps our order by in the user search a LOT
   @@index([ownerId, updatedAt])
 }
 
-model NoteImage {
+model OptionsVariation {
+  id          String  @id @default(cuid())
+  name        String
+
+  product   Product?   @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  productId   String?
+
+  // non-unique foreign key
+  @@index([productId])
+}
+model ProductVariation {
+  id          String  @id @default(cuid())
+  productStripeId String
+  price       Int
+  quantity    Int
+  weight      Int
+  height      Int
+  width       Int
+
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  productId   String
+
+  // non-unique foreign key
+  @@index([productId])
+}
+model ColorVariation {
+  id   String  @id @default(cuid())
+  name String
+
+  product   Product?   @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  productId String?
+
+  // non-unique foreign key
+  @@index([productId])
+}
+model ProductImage {
   id          String  @id @default(cuid())
   altText     String?
   contentType String
@@ -55,11 +165,88 @@ model NoteImage {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  note   Note   @relation(fields: [noteId], references: [id], onDelete: Cascade, onUpdate: Cascade)
-  noteId String
+  product   Product   @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  productId String
 
   // non-unique foreign key
-  @@index([noteId])
+  @@index([productId])
+}
+model Order {
+  id String  @id @default(cuid())
+  
+  cart   Cart?  @relation(fields: [cartId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  cartId String?
+  customer   User?   @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  customerId String?
+  Address   Address?   @relation(fields: [billingAddressId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  billingAddressId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  canceledAt DateTime? @updatedAt
+  deletedAt DateTime? @updatedAt
+  
+  orderStatus OrderStatus[]
+  orderFulfillmentStatus OrderFulfillmentStatus[]
+  paymentStatus OrderPaymentStatus[]
+  payment Payment[]
+  swap Swap[]
+}
+
+model Swap {
+  id String  @id @default(cuid())
+  
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderId String
+  cart   Cart   @relation(fields: [cartId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  cartId String
+  address   Address   @relation(fields: [billingAddressId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  billingAddressId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime? @default(now())
+  canceledAt DateTime? @updatedAt
+  deteletedAt DateTime? @updatedAt
+  confirmedAt DateTime? @updatedAt
+
+  fulfillmentStatus SwapFulfillmentStatus[]
+  paymentStatus SwapPaymentStatus[]
+  payment Payment[]
+}
+model Payment {
+    id String  @id @default(cuid())
+
+  swap   Swap   @relation(fields: [swapId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  swapId String
+  address Address @relation(fields: [addressId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  addressId String
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  orderId String
+
+  cart Cart[]
+  amount Int
+  currencyCode String
+  amountRefunded Int?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+  canceledAt DateTime? @updatedAt
+  capturedAt DateTime? @updatedAt
+}
+model Cart {
+    id String  @id @default(cuid())
+    
+    address   Address   @relation(fields: [billingAddressId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    billingAddressId String
+    customer   User     @relation(fields: [customerId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    customerId String
+    payment Payment     @relation(fields: [paymentId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+    paymentId String
+  
+    completedAt DateTime @updatedAt
+    createdAt DateTime @default(now())
+    updatedAt DateTime @default(now())
+    deletedAt DateTime @updatedAt
+
+    order Order[]
+    swap Swap[]
 }
 
 model UserImage {

@@ -8,7 +8,6 @@ import {
 	type MetaFunction,
 } from '@remix-run/node'
 import { Form, useActionData, useSearchParams } from '@remix-run/react'
-import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { HoneypotInputs } from 'remix-utils/honeypot/react'
 import { z } from 'zod'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
@@ -18,7 +17,6 @@ import {
 	ProviderConnectionForm,
 	providerNames,
 } from '#app/utils/connections.tsx'
-import { validateCSRF } from '#app/utils/csrf.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { sendEmail } from '#app/utils/email.server.ts'
 import { checkHoneypot } from '#app/utils/honeypot.server.ts'
@@ -32,8 +30,6 @@ const SignupSchema = z.object({
 
 export async function action({ request }: DataFunctionArgs) {
 	const formData = await request.formData()
-
-	await validateCSRF(formData, request.headers)
 	checkHoneypot(formData)
 
 	const submission = await parse(formData, {
@@ -60,7 +56,7 @@ export async function action({ request }: DataFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 	const { email } = submission.value
-	const { verifyUrl, redirectTo, otp } = await prepareVerification({
+	const { verifyUrl, redirectTo } = await prepareVerification({
 		period: 10 * 60,
 		request,
 		type: 'onboarding',
@@ -69,8 +65,8 @@ export async function action({ request }: DataFunctionArgs) {
 
 	const response = await sendEmail({
 		to: email,
-		subject: `Welcome to Epic Notes!`,
-		react: <SignupEmail onboardingUrl={verifyUrl.toString()} otp={otp} />,
+		subject: `Bem Vindo a Artesanatos da Zizi!`,
+		react: <SignupEmail onboardingUrl={verifyUrl.toString()} />,
 	})
 
 	if (response.status === 'success') {
@@ -83,24 +79,17 @@ export async function action({ request }: DataFunctionArgs) {
 
 export function SignupEmail({
 	onboardingUrl,
-	otp,
 }: {
 	onboardingUrl: string
-	otp: string
 }) {
 	return (
 		<E.Html lang="en" dir="ltr">
 			<E.Container>
 				<h1>
-					<E.Text>Welcome to Epic Notes!</E.Text>
+					<E.Text>Bem Vindo a Artesanatos da Zizi!</E.Text>
 				</h1>
 				<p>
-					<E.Text>
-						Here's your verification code: <strong>{otp}</strong>
-					</E.Text>
-				</p>
-				<p>
-					<E.Text>Or click the link to get started:</E.Text>
+					<E.Text>Click para começar:</E.Text>
 				</p>
 				<E.Link href={onboardingUrl}>{onboardingUrl}</E.Link>
 			</E.Container>
@@ -109,7 +98,7 @@ export function SignupEmail({
 }
 
 export const meta: MetaFunction = () => {
-	return [{ title: 'Sign Up | Epic Notes' }]
+	return [{ title: 'Sign Up | Artesanatos da Zizi' }]
 }
 
 export default function SignupRoute() {
@@ -139,7 +128,6 @@ export default function SignupRoute() {
 			</div>
 			<div className="mx-auto mt-16 min-w-[368px] max-w-sm">
 				<Form method="POST" {...form.props}>
-					<AuthenticityTokenInput />
 					<HoneypotInputs />
 					<Field
 						labelProps={{
@@ -156,7 +144,7 @@ export default function SignupRoute() {
 						type="submit"
 						disabled={isPending}
 					>
-						Submit
+						Enviar
 					</StatusButton>
 				</Form>
 				<ul className="mt-5 flex flex-col gap-5 border-b-2 border-t-2 border-border py-3">

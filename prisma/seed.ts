@@ -1,15 +1,12 @@
-import { faker } from '@faker-js/faker'
+// import { faker } from '@faker-js/faker'
 import { promiseHash } from 'remix-utils/promise'
 import { prisma } from '#app/utils/db.server.ts'
 import {
 	cleanupDb,
 	createPassword,
-	createUser,
-	getNoteImages,
-	getUserImages,
 	img,
 } from '#tests/db-utils.ts'
-import { insertGitHubUser } from '#tests/mocks/github.ts'
+// import { insertGitHubUser } from '#tests/mocks/github.ts'
 
 async function seed() {
 	console.log('🌱 Seeding...')
@@ -18,9 +15,33 @@ async function seed() {
 	console.time('🧹 Cleaned up the database...')
 	await cleanupDb(prisma)
 	console.timeEnd('🧹 Cleaned up the database...')
+	console.time('🔑 Created status...')
+    const swapPaymentStatus = ['not_paid', 'awaiting', 'captured', 'confirmed', 'canceled', 'difference_refunded', 'partially_refunded', 'refunded', 'requires_action']
+    const swapFulfillmentStatus = ['not_fulfilled', 'fulfilled', 'canceled', 'requires_action']
+    const orderPaymentStatus = ['authorized', 'pending', 'requires_more', 'error', 'canceled']
+    const orderFulfillmentStatus = ['not_fulfilled', 'partially_fulfilled', 'fulfilled', 'canceled', 'requires_action']
+    const orderStatus = ['pending', 'completed', 'archived', 'canceled', 'requires_action']
+
+    for (const status of swapPaymentStatus) {
+        await prisma.swapPaymentStatus.create({ data: { status } })
+    }
+    for (const status of swapFulfillmentStatus) {
+        await prisma.swapFulfillmentStatus.create({ data: { status } })
+    }
+    for (const status of orderPaymentStatus) {
+        await prisma.orderPaymentStatus.create({ data: { status } })
+    }
+    for (const status of orderFulfillmentStatus) {
+        await prisma.orderFulfillmentStatus.create({ data: { status } })
+    }
+    for (const status of orderStatus) {
+        await prisma.orderStatus.create({ data: { status } })
+    }
+    console.timeEnd('🔑 Created status...')
 
 	console.time('🔑 Created permissions...')
-	const entities = ['user', 'note']
+    
+    const entities = ['user', 'note']
 	const actions = ['create', 'read', 'update', 'delete']
 	const accesses = ['own', 'any'] as const
 	for (const entity of entities) {
@@ -63,191 +84,300 @@ async function seed() {
 		return
 	}
 
-	const totalUsers = 5
-	console.time(`👤 Created ${totalUsers} users...`)
-	const noteImages = await getNoteImages()
-	const userImages = await getUserImages()
+	console.time(`🐨 Created Options`)
+	const productOptions = ['artist', 'catholic', 'lotus', 'flower', 'mirrow', 'doors', 'other']
 
-	for (let index = 0; index < totalUsers; index++) {
-		const userData = createUser()
-		await prisma.user
-			.create({
-				select: { id: true },
-				data: {
-					...userData,
-					password: { create: createPassword(userData.username) },
-					image: { create: userImages[index % userImages.length] },
-					roles: { connect: { name: 'user' } },
-					notes: {
-						create: Array.from({
-							length: faker.number.int({ min: 1, max: 3 }),
-						}).map(() => ({
-							title: faker.lorem.sentence(),
-							content: faker.lorem.paragraphs(),
-							images: {
-								create: Array.from({
-									length: faker.number.int({ min: 1, max: 3 }),
-								}).map(() => {
-									const imgNumber = faker.number.int({ min: 0, max: 9 })
-									return noteImages[imgNumber]
-								}),
-							},
-						})),
-					},
-				},
-			})
-			.catch(e => {
-				console.error('Error creating a user:', e)
-				return null
-			})
-	}
-	console.timeEnd(`👤 Created ${totalUsers} users...`)
+    for (const name of productOptions) {
+        await prisma.optionsVariation.create({ data: { name } })
+    }
 
-	console.time(`🐨 Created admin user "kody"`)
+	const productColors = ['white','black','yellow','blue','red','green','purple','pink','orange','gray','brown','gold','silver','other']
 
-	const kodyImages = await promiseHash({
+    for (const name of productColors) {
+        await prisma.colorVariation.create({ data: { name } })
+    }
+	console.timeEnd(`👤 Created Options`)
+
+	console.time(`🐨 Created admin user "felps77"`)
+
+	const toUploadImages = await promiseHash({
 		kodyUser: img({ filepath: './tests/fixtures/images/user/kody.png' }),
-		cuteKoala: img({
-			altText: 'an adorable koala cartoon illustration',
-			filepath: './tests/fixtures/images/kody-notes/cute-koala.png',
+		redMandala: img({
+			altText: 'Mandalas com tonalidade em vermelho',
+			filepath: './tests/fixtures/images/mandalas/13.png',
 		}),
-		koalaEating: img({
-			altText: 'a cartoon illustration of a koala in a tree eating',
-			filepath: './tests/fixtures/images/kody-notes/koala-eating.png',
+        blueAndWhiteMandala: img({
+			altText: 'Mandalas com tonalidade em azul e branco',
+			filepath: './tests/fixtures/images/mandalas/1.png',
 		}),
-		koalaCuddle: img({
-			altText: 'a cartoon illustration of koalas cuddling',
-			filepath: './tests/fixtures/images/kody-notes/koala-cuddle.png',
+        lotusMandala: img({
+			altText: 'Mandalas com a flor de lotus',
+			filepath: './tests/fixtures/images/mandalas/2.png',
 		}),
-		mountain: img({
-			altText: 'a beautiful mountain covered in snow',
-			filepath: './tests/fixtures/images/kody-notes/mountain.png',
+		greenBlueMandala: img({
+			altText: 'Mandalas com tonalidade em azul e verde',
+			filepath: './tests/fixtures/images/mandalas/3.png',
 		}),
-		koalaCoder: img({
-			altText: 'a koala coding at the computer',
-			filepath: './tests/fixtures/images/kody-notes/koala-coder.png',
+        blueGreenMandala: img({
+			altText: 'Mandalas com tonalidade em azul e verde',
+			filepath: './tests/fixtures/images/mandalas/4.png',
 		}),
-		koalaMentor: img({
-			altText:
-				'a koala in a friendly and helpful posture. The Koala is standing next to and teaching a woman who is coding on a computer and shows positive signs of learning and understanding what is being explained.',
-			filepath: './tests/fixtures/images/kody-notes/koala-mentor.png',
+		catholicMandala: img({
+			altText: 'Mandalas com simbologia católica',
+			filepath: './tests/fixtures/images/mandalas/5.png',
 		}),
-		koalaSoccer: img({
-			altText: 'a cute cartoon koala kicking a soccer ball on a soccer field ',
-			filepath: './tests/fixtures/images/kody-notes/koala-soccer.png',
+        flowersMandala: img({
+			altText: 'Mandalas com temas florais',
+			filepath: './tests/fixtures/images/mandalas/6.png',
 		}),
-	})
+        blackWhiteMandala: img({
+			altText: 'Mandalas com tonalidade em branco e preto',
+			filepath: './tests/fixtures/images/mandalas/7.png',
+		}),
+        pastelMandala: img({
+			altText: 'Mandalas com tonalidades em cores pastel',
+			filepath: './tests/fixtures/images/mandalas/15.png',
+		}),
+        mirrowBlueMandala: img({
+			altText: 'Mandalas com borda azul e espelho',
+			filepath: './tests/fixtures/images/mandalas/17.png',
+		}),
+        mirrowGreenMandala: img({
+			altText: 'Mandalas com borda verde e espelho',
+			filepath: './tests/fixtures/images/mandalas/18.png',
+		}),
+        eyesMandala: img({
+			altText: 'Mandalas de porta',
+			filepath: './tests/fixtures/images/mandalas/19.png',
+		}),
+        eyesGroupMandala: img({
+			altText: 'Grupo de mandalas de porta',
+			filepath: './tests/fixtures/images/mandalas/20.png',
+		}),
+	})  
 
-	const githubUser = await insertGitHubUser('MOCK_CODE_GITHUB_KODY')
+	// const githubUser = await insertGitHubUser('MOCK_CODE_GITHUB_KODY')
 
 	await prisma.user.create({
 		select: { id: true },
 		data: {
-			email: 'kody@kcd.dev',
-			username: 'kody',
-			name: 'Kody',
-			image: { create: kodyImages.kodyUser },
-			password: { create: createPassword('kodylovesyou') },
-			connections: {
-				create: { providerName: 'github', providerId: githubUser.profile.id },
-			},
+			email: 'felipealisbo@outlook.com',
+			username: 'felps77',
+			name: 'Felipe',
+			image: { create: toUploadImages.kodyUser },
+			password: { create: createPassword('18072016') },
 			roles: { connect: [{ name: 'admin' }, { name: 'user' }] },
-			notes: {
+			products: {
 				create: [
 					{
 						id: 'd27a197e',
-						title: 'Basic Koala Facts',
-						content:
-							'Koalas are found in the eucalyptus forests of eastern Australia. They have grey fur with a cream-coloured chest, and strong, clawed feet, perfect for living in the branches of trees!',
-						images: { create: [kodyImages.cuteKoala, kodyImages.koalaEating] },
+						title: 'Mandalas 60 cm',
+						description:
+							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
+						images: { create: [toUploadImages.redMandala] },
+                        slug: 'mandalas-60-cm',
+                        productVariation: {
+                            create: [
+                                {
+                                    id: 'd27a200e',
+                                    productStripeId: 'prod_OtLSfBPEgGjs95',
+                                    price: 25080,
+                                    quantity: 1,
+									weight: 1500,
+									height: 3,
+									width: 60,
+                                },
+                            ],
+                        }
 					},
 					{
 						id: '414f0c09',
-						title: 'Koalas like to cuddle',
-						content:
-							'Cuddly critters, koalas measure about 60cm to 85cm long, and weigh about 14kg.',
-						images: {
-							create: [kodyImages.koalaCuddle],
-						},
+						title: 'Mandalas 12 cm',
+						description:
+							'Técnica de pontilhismo em pdf. Mandalas com tonalidades em tons de vermelho podendo adicionar outras cores.',
+						images: { create: [toUploadImages.pastelMandala] },
+                        slug: 'mandalas-12-cm',
+                        productVariation: {
+                            create: [
+                                {
+                                    id: 'd27a201e',
+                                    productStripeId: 'prod_OtLx60wue0ScJ6',
+                                    price: 6080,
+                                    quantity: 1,
+									weight: 100,
+									height: 3,
+									width: 12,
+                                },
+                            ],
+                        }
 					},
 					{
 						id: '260366b1',
-						title: 'Not bears',
-						content:
-							"Although you may have heard people call them koala 'bears', these awesome animals aren’t bears at all – they are in fact marsupials. A group of mammals, most marsupials have pouches where their newborns develop.",
+						title: 'Mandalas 55 cm',
+						description:
+							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
+						images: { create: [toUploadImages.blackWhiteMandala] },
+                        slug: 'mandalas-55-cm',
+                        productVariation: {
+                            create: [
+                                {
+                                    id: 'd27a202e',
+                                    productStripeId: 'prod_OtLWjBkh9lRS75',
+                                    price: 24080,
+                                    quantity: 1,
+									weight: 1300,
+									height: 3,
+									width: 55,
+                                },
+                            ],
+                        }
 					},
 					{
 						id: 'bb79cf45',
-						title: 'Snowboarding Adventure',
-						content:
-							"Today was an epic day on the slopes! Shredded fresh powder with my friends, caught some sick air, and even attempted a backflip. Can't wait for the next snowy adventure!",
-						images: {
-							create: [kodyImages.mountain],
-						},
+						title: 'Mandalas 50 cm',
+						description:
+							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
+						images: { create: [toUploadImages.blueAndWhiteMandala] },
+                        slug: 'mandalas-50-cm',
+                        productVariation: {
+                            create: [
+                                {
+                                    id: 'd27a203e',
+                                    productStripeId: 'prod_OtLZcNMfYvnBLA',
+                                    price: 22080,
+                                    quantity: 1,
+									weight: 1100,
+									height: 3,
+									width: 50,
+                                },
+                            ],
+                        }
 					},
 					{
 						id: '9f4308be',
-						title: 'Onewheel Tricks',
-						content:
-							"Mastered a new trick on my Onewheel today called '180 Spin'. It's exhilarating to carve through the streets while pulling off these rad moves. Time to level up and learn more!",
+						title: 'Mandalas 45 cm',
+						description:
+							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
+						images: { create: [toUploadImages.blueGreenMandala] },
+                        slug: 'mandalas-45-cm',
+                        productVariation: {
+                            create: [
+                                {
+                                    id: 'd27a204e',
+                                    productStripeId: 'prod_OtLcdkNLBOvLGU',
+                                    price: 21080,
+                                    quantity: 1,
+									weight: 1000,
+									height: 3,
+									width: 45,
+                                },
+                            ],
+                        }
 					},
 					{
 						id: '306021fb',
-						title: 'Coding Dilemma',
-						content:
-							"Stuck on a bug in my latest coding project. Need to figure out why my function isn't returning the expected output. Time to dig deep, debug, and conquer this challenge!",
-						images: {
-							create: [kodyImages.koalaCoder],
-						},
+						title: 'Mandalas 40 cm',
+						description:
+							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
+						images: { create: [toUploadImages.catholicMandala] },
+                        slug: 'mandalas-40-cm',
+                        productVariation: {
+                            create: [
+                                {
+                                    id: 'd27a205e',
+                                    productStripeId: 'prod_OtLirOc4OimR0w',
+                                    price: 18080,
+                                    quantity: 1,
+									weight: 900,
+									height: 3,
+									width: 40,
+                                },
+                            ],
+                        }
 					},
 					{
 						id: '16d4912a',
-						title: 'Coding Mentorship',
-						content:
-							"Had a fantastic coding mentoring session today with Sarah. Helped her understand the concept of recursion, and she made great progress. It's incredibly fulfilling to help others improve their coding skills.",
-						images: {
-							create: [kodyImages.koalaMentor],
-						},
+						title: 'Mandalas 35 cm',
+						description:
+							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
+						images: { create: [toUploadImages.flowersMandala] },
+                        slug: 'mandalas-35-cm',
+                        productVariation: {
+                            create: [
+                                {
+                                    id: 'd27a206e',
+                                    productStripeId: 'prod_OtLmJ4obuHm1th',
+                                    price: 15080,
+                                    quantity: 1,
+									weight: 800,
+									height: 3,
+									width: 35,
+                                },
+                            ],
+                        }
 					},
 					{
 						id: '3199199e',
-						title: 'Koala Fun Facts',
-						content:
-							"Did you know that koalas sleep for up to 20 hours a day? It's because their diet of eucalyptus leaves doesn't provide much energy. But when I'm awake, I enjoy munching on leaves, chilling in trees, and being the cuddliest koala around!",
+						title: 'Mandalas 30 cm',
+						description:
+							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
+						images: { create: [toUploadImages.greenBlueMandala] },
+                        slug: 'mandalas-30-cm',
+                        productVariation: {
+                            create: [
+                                {
+                                    id: 'd27a207e',
+                                    productStripeId: 'prod_OtLpmbqOq0uAuK',
+                                    price: 12080,
+                                    quantity: 1,
+									weight: 700,
+									height: 3,
+									width: 30,
+                                },
+                            ],
+                        }
 					},
 					{
 						id: '2030ffd3',
-						title: 'Skiing Adventure',
-						content:
-							'Spent the day hitting the slopes on my skis. The fresh powder made for some incredible runs and breathtaking views. Skiing down the mountain at top speed is an adrenaline rush like no other!',
-						images: {
-							create: [kodyImages.mountain],
-						},
+						title: 'Mandalas 25 cm',
+						description:
+							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
+						images: { create: [toUploadImages.lotusMandala] },
+                        slug: 'mandalas-25-cm',
+                        productVariation: {
+                            create: [
+                                {
+                                    id: 'd27a208e',
+                                    productStripeId: 'prod_OtLsqehyQMGSm9',
+                                    price: 10080,
+                                    quantity: 1,
+									weight: 600,
+									height: 3,
+									width: 25,
+                                },
+                            ],
+                        }
 					},
 					{
 						id: 'f375a804',
-						title: 'Code Jam Success',
-						content:
-							'Participated in a coding competition today and secured the first place! The adrenaline, the challenging problems, and the satisfaction of finding optimal solutions—it was an amazing experience. Feeling proud and motivated to keep pushing my coding skills further!',
-						images: {
-							create: [kodyImages.koalaCoder],
-						},
-					},
-					{
-						id: '562c541b',
-						title: 'Koala Conservation Efforts',
-						content:
-							"Joined a local conservation group to protect koalas and their habitats. Together, we're planting more eucalyptus trees, raising awareness about their endangered status, and working towards a sustainable future for these adorable creatures. Every small step counts!",
-					},
-					// extra long note to test scrolling
-					{
-						id: 'f67ca40b',
-						title: 'Game day',
-						content:
-							"Just got back from the most amazing game. I've been playing soccer for a long time, but I've not once scored a goal. Well, today all that changed! I finally scored my first ever goal.\n\nI'm in an indoor league, and my team's not the best, but we're pretty good and I have fun, that's all that really matters. Anyway, I found myself at the other end of the field with the ball. It was just me and the goalie. I normally just kick the ball and hope it goes in, but the ball was already rolling toward the goal. The goalie was about to get the ball, so I had to charge. I managed to get possession of the ball just before the goalie got it. I brought it around the goalie and had a perfect shot. I screamed so loud in excitement. After all these years playing, I finally scored a goal!\n\nI know it's not a lot for most folks, but it meant a lot to me. We did end up winning the game by one. It makes me feel great that I had a part to play in that.\n\nIn this team, I'm the captain. I'm constantly cheering my team on. Even after getting injured, I continued to come and watch from the side-lines. I enjoy yelling (encouragingly) at my team mates and helping them be the best they can. I'm definitely not the best player by a long stretch. But I really enjoy the game. It's a great way to get exercise and have good social interactions once a week.\n\nThat said, it can be hard to keep people coming and paying dues and stuff. If people don't show up it can be really hard to find subs. I have a list of people I can text, but sometimes I can't find anyone.\n\nBut yeah, today was awesome. I felt like more than just a player that gets in the way of the opposition, but an actual asset to the team. Really great feeling.\n\nAnyway, I'm rambling at this point and really this is just so we can have a note that's pretty long to test things out. I think it's long enough now... Cheers!",
-						images: {
-							create: [kodyImages.koalaSoccer],
-						},
+						title: 'Mandalas 20 cm',
+						description:
+							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
+						images: { create: [toUploadImages.lotusMandala] },
+                        slug: 'mandalas-20-cm',
+                        productVariation: {
+                            create: [
+                                {
+                                    id: 'd27a209e',
+                                    productStripeId: 'prod_OtLt3Lk9szv1ti',
+                                    price: 8080,
+                                    quantity: 1,
+									weight: 500,
+									height: 3,
+									width: 20,
+                                },
+                            ],
+                        }
 					},
 				],
 			},

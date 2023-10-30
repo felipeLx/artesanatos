@@ -87,7 +87,7 @@ export async function action({ request }: DataFunctionArgs) {
 }
 
 export const meta: MetaFunction = () => {
-	return [{ title: 'Reset Password | Epic Notes' }]
+	return [{ title: 'Reset Password | Artesanatos da Zizi' }]
 }
 
 export default function ResetPasswordPage() {

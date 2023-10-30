@@ -1,28 +1,26 @@
 import { z } from 'zod'
 
 export const UsernameSchema = z
-	.string({ required_error: 'Username is required' })
-	.min(3, { message: 'Username is too short' })
-	.max(20, { message: 'Username is too long' })
+	.string({ required_error: 'Usuário é necessário' })
+	.min(3, { message: 'Usuário é muito curto' })
+	.max(20, { message: 'Usuário é muito longo' })
 	.regex(/^[a-zA-Z0-9_]+$/, {
-		message: 'Username can only include letters, numbers, and underscores',
+		message: 'Usuário somente por ter letras, números e underscores. ',
 	})
 	// users can type the username in any case, but we store it in lowercase
 	.transform(value => value.toLowerCase())
 
 export const PasswordSchema = z
-	.string({ required_error: 'Password is required' })
-	.min(6, { message: 'Password is too short' })
-	.max(100, { message: 'Password is too long' })
+	.string({ required_error: 'Senha é necessário' })
+	.min(6, { message: 'Senha é muito curta' })
+	.max(100, { message: 'Senha é muito longa' })
 export const NameSchema = z
-	.string({ required_error: 'Name is required' })
-	.min(3, { message: 'Name is too short' })
-	.max(40, { message: 'Name is too long' })
+	.string({ required_error: 'Nome é necessário' })
+	.min(3, { message: 'Nome é muito curto' })
+	.max(40, { message: 'Nome é muito longo' })
 export const EmailSchema = z
-	.string({ required_error: 'Email is required' })
-	.email({ message: 'Email is invalid' })
-	.min(3, { message: 'Email is too short' })
-	.max(100, { message: 'Email is too long' })
+	.string({ required_error: 'Email é necessário' })
+	.email({ message: 'Email é inválido' })
 	// users can type the email in any case, but we store it in lowercase
 	.transform(value => value.toLowerCase())
 
@@ -33,7 +31,7 @@ export const PasswordAndConfirmPasswordSchema = z
 			ctx.addIssue({
 				path: ['confirmPassword'],
 				code: 'custom',
-				message: 'The passwords must match',
+				message: 'Deve ser a mesma senha',
 			})
 		}
 	})

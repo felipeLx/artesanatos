@@ -4,7 +4,7 @@ import { invariantResponse } from '#app/utils/misc.tsx'
 
 export async function loader({ params }: DataFunctionArgs) {
 	invariantResponse(params.imageId, 'Image ID is required', { status: 400 })
-	const image = await prisma.noteImage.findUnique({
+	const image = await prisma.productImage.findUnique({
 		where: { id: params.imageId },
 		select: { contentType: true, blob: true },
 	})
