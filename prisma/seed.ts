@@ -175,7 +175,6 @@ async function seed() {
 						description:
 							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
 						images: { create: [toUploadImages.redMandala] },
-                        slug: 'mandalas-60-cm',
                         productVariation: {
                             create: [
                                 {
@@ -196,7 +195,6 @@ async function seed() {
 						description:
 							'Técnica de pontilhismo em pdf. Mandalas com tonalidades em tons de vermelho podendo adicionar outras cores.',
 						images: { create: [toUploadImages.pastelMandala] },
-                        slug: 'mandalas-12-cm',
                         productVariation: {
                             create: [
                                 {
@@ -217,7 +215,6 @@ async function seed() {
 						description:
 							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
 						images: { create: [toUploadImages.blackWhiteMandala] },
-                        slug: 'mandalas-55-cm',
                         productVariation: {
                             create: [
                                 {
@@ -238,7 +235,6 @@ async function seed() {
 						description:
 							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
 						images: { create: [toUploadImages.blueAndWhiteMandala] },
-                        slug: 'mandalas-50-cm',
                         productVariation: {
                             create: [
                                 {
@@ -259,7 +255,6 @@ async function seed() {
 						description:
 							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
 						images: { create: [toUploadImages.blueGreenMandala] },
-                        slug: 'mandalas-45-cm',
                         productVariation: {
                             create: [
                                 {
@@ -280,7 +275,6 @@ async function seed() {
 						description:
 							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
 						images: { create: [toUploadImages.catholicMandala] },
-                        slug: 'mandalas-40-cm',
                         productVariation: {
                             create: [
                                 {
@@ -301,7 +295,6 @@ async function seed() {
 						description:
 							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
 						images: { create: [toUploadImages.flowersMandala] },
-                        slug: 'mandalas-35-cm',
                         productVariation: {
                             create: [
                                 {
@@ -322,7 +315,6 @@ async function seed() {
 						description:
 							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
 						images: { create: [toUploadImages.greenBlueMandala] },
-                        slug: 'mandalas-30-cm',
                         productVariation: {
                             create: [
                                 {
@@ -343,7 +335,6 @@ async function seed() {
 						description:
 							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
 						images: { create: [toUploadImages.lotusMandala] },
-                        slug: 'mandalas-25-cm',
                         productVariation: {
                             create: [
                                 {
@@ -364,7 +355,6 @@ async function seed() {
 						description:
 							'Técnica de pontilhismo em pdf. Escolha até 4 cores e outras opções para personalizar sua Mandala. Artistas do Espírito Santo / Brasil. Entrega em até 30 dias.',
 						images: { create: [toUploadImages.lotusMandala] },
-                        slug: 'mandalas-20-cm',
                         productVariation: {
                             create: [
                                 {

@@ -89,12 +89,12 @@ export default function CreatePasswordRoute() {
 	return (
 		<Form method="POST" {...form.props} className="mx-auto max-w-md">
 			<Field
-				labelProps={{ children: 'New Password' }}
+				labelProps={{ children: 'Nova senha' }}
 				inputProps={conform.input(fields.password, { type: 'password' })}
 				errors={fields.password.errors}
 			/>
 			<Field
-				labelProps={{ children: 'Confirm New Password' }}
+				labelProps={{ children: 'Confirmar Nova Senha' }}
 				inputProps={conform.input(fields.confirmPassword, {
 					type: 'password',
 				})}
@@ -103,13 +103,13 @@ export default function CreatePasswordRoute() {
 			<ErrorList id={form.errorId} errors={form.errors} />
 			<div className="grid w-full grid-cols-2 gap-6">
 				<Button variant="secondary" asChild>
-					<Link to="..">Cancel</Link>
+					<Link to="..">Cancelar</Link>
 				</Button>
 				<StatusButton
 					type="submit"
 					status={isPending ? 'pending' : actionData?.status ?? 'idle'}
 				>
-					Create Password
+					Criar Senha
 				</StatusButton>
 			</div>
 		</Form>

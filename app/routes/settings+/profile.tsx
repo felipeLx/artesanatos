@@ -55,7 +55,7 @@ export default function EditUserProfile() {
 							className="text-muted-foreground"
 							to={`/users/${user.username}`}
 						>
-							Profile
+							Perfil
 						</Link>
 					</li>
 					{breadcrumbs.map((breadcrumb, i, arr) => (

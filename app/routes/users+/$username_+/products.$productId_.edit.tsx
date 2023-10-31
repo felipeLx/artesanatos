@@ -3,13 +3,13 @@ import { useLoaderData } from '@remix-run/react'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { invariantResponse } from '#app/utils/misc.tsx'
-import { NoteEditor, action } from './__note-editor.tsx'
+import { ProductEditor, action } from './__product-editor.tsx'
 
 export { action }
 
 export async function loader({ params, request }: DataFunctionArgs) {
 	const userId = await requireUserId(request)
-	const note = await prisma.note.findFirst({
+	const product = await prisma.product.findFirst({
 		select: {
 			id: true,
 			title: true,
@@ -22,16 +22,16 @@ export async function loader({ params, request }: DataFunctionArgs) {
 			},
 		},
 		where: {
-			id: params.noteId,
+			id: params.productId,
 			ownerId: userId,
 		},
 	})
-	invariantResponse(note, 'Not found', { status: 404 })
-	return json({ note: note })
+	invariantResponse(product, 'Not found', { status: 404 })
+	return json({ product: product })
 }
 
 export default function NoteEdit() {
 	const data = useLoaderData<typeof loader>()
 
-	return <NoteEditor note={data.note} />
+	return <ProductEditor product={data.product} />
 }

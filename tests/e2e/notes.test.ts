@@ -14,41 +14,41 @@ test('Users can create notes', async ({ page, login }) => {
 	await page.getByRole('textbox', { name: /content/i }).fill(newNote.content)
 
 	await page.getByRole('button', { name: /submit/i }).click()
-	await expect(page).toHaveURL(new RegExp(`/users/${user.username}/notes/.*`))
+	await expect(page).toHaveURL(new RegExp(`/users/${user.username}/products/.*`))
 })
 
 test('Users can edit notes', async ({ page, login }) => {
 	const user = await login()
 
-	const note = await prisma.note.create({
+	const note = await prisma.product.create({
 		select: { id: true },
 		data: { ...createNote(), ownerId: user.id },
 	})
-	await page.goto(`/users/${user.username}/notes/${note.id}`)
+	await page.goto(`/users/${user.username}/products/${note.id}`)
 
 	// edit the note
 	await page.getByRole('link', { name: 'Edit', exact: true }).click()
-	const updatedNote = createNote()
-	await page.getByRole('textbox', { name: /title/i }).fill(updatedNote.title)
+	const updatedProduct = createNote()
+	await page.getByRole('textbox', { name: /title/i }).fill(updatedProduct.title)
 	await page
 		.getByRole('textbox', { name: /content/i })
-		.fill(updatedNote.content)
+		.fill(updatedProduct.content)
 	await page.getByRole('button', { name: /submit/i }).click()
 
-	await expect(page).toHaveURL(new RegExp(`/users/${user.username}/notes/.*`))
+	await expect(page).toHaveURL(new RegExp(`/users/${user.username}/products/.*`))
 	await expect(
-		page.getByRole('heading', { name: updatedNote.title }),
+		page.getByRole('heading', { name: updatedProduct.title }),
 	).toBeVisible()
 })
 
 test('Users can delete notes', async ({ page, login }) => {
 	const user = await login()
 
-	const note = await prisma.note.create({
+	const note = await prisma.product.create({
 		select: { id: true },
 		data: { ...createNote(), ownerId: user.id },
 	})
-	await page.goto(`/users/${user.username}/notes/${note.id}`)
+	await page.goto(`/users/${user.username}/products/${note.id}`)
 
 	// find links with href prefix
 	const noteLinks = page

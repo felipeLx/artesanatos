@@ -60,8 +60,7 @@ export async function loader({ request }: DataFunctionArgs) {
 
 	return json({
 		user,
-		hasPassword: Boolean(password),
-		isTwoFactorEnabled: Boolean(twoFactorVerification),
+		hasPassword: Boolean(password)
 	})
 }
 
@@ -77,7 +76,6 @@ const deleteDataActionIntent = 'delete-data'
 export async function action({ request }: DataFunctionArgs) {
 	const userId = await requireUserId(request)
 	const formData = await request.formData()
-	await validateCSRF(formData, request.headers)
 	const intent = formData.get('intent')
 	switch (intent) {
 		case profileUpdateActionIntent: {
@@ -128,31 +126,10 @@ export default function EditUserProfile() {
 			<div className="col-span-6 my-6 h-1 border-b-[1.5px] border-foreground" />
 			<div className="col-span-full flex flex-col gap-6">
 				<div>
-					<Link to="change-email">
-						<Icon name="envelope-closed">
-							Change email from {data.user.email}
-						</Icon>
-					</Link>
-				</div>
-				<div>
-					<Link to="two-factor">
-						{data.isTwoFactorEnabled ? (
-							<Icon name="lock-closed">2FA is enabled</Icon>
-						) : (
-							<Icon name="lock-open-1">Enable 2FA</Icon>
-						)}
-					</Link>
-				</div>
-				<div>
 					<Link to={data.hasPassword ? 'password' : 'password/create'}>
 						<Icon name="dots-horizontal">
-							{data.hasPassword ? 'Change Password' : 'Create a Password'}
+							{data.hasPassword ? 'Alterar a Senha' : 'Criar uma Senha'}
 						</Icon>
-					</Link>
-				</div>
-				<div>
-					<Link to="connections">
-						<Icon name="link-2">Manage connections</Icon>
 					</Link>
 				</div>
 				<div>
@@ -161,7 +138,7 @@ export default function EditUserProfile() {
 						download="my-epic-notes-data.json"
 						to="/resources/download-user-data"
 					>
-						<Icon name="download">Download your data</Icon>
+						<Icon name="download">Faça Download dos seus dados</Icon>
 					</Link>
 				</div>
 				<SignOutOfSessions />
@@ -183,7 +160,7 @@ async function profileUpdateAction({ userId, formData }: ProfileActionArgs) {
 				ctx.addIssue({
 					path: ['username'],
 					code: z.ZodIssueCode.custom,
-					message: 'A user already exists with this username',
+					message: 'Um usuário com este nome de usuário já existe.',
 				})
 			}
 		}),
@@ -314,13 +291,13 @@ function SignOutOfSessions() {
 					>
 						<Icon name="avatar">
 							{dc.doubleCheck
-								? `Are you sure?`
-								: `Sign out of ${otherSessionsCount} other sessions`}
+								? `Você tem certeza?`
+								: `Sair de ${otherSessionsCount} outras sessões`}
 						</Icon>
 					</StatusButton>
 				</fetcher.Form>
 			) : (
-				<Icon name="avatar">This is your only session</Icon>
+				<Icon name="avatar">Esta é sua sessão única</Icon>
 			)}
 		</div>
 	)
@@ -330,8 +307,8 @@ async function deleteDataAction({ userId }: ProfileActionArgs) {
 	await prisma.user.delete({ where: { id: userId } })
 	return redirectWithToast('/', {
 		type: 'success',
-		title: 'Data Deleted',
-		description: 'All of your data has been deleted',
+		title: 'Dados apagados',
+		description: 'Todos os seus dados foram apagados',
 	})
 }
 
@@ -353,7 +330,7 @@ function DeleteData() {
 					status={fetcher.state !== 'idle' ? 'pending' : 'idle'}
 				>
 					<Icon name="trash">
-						{dc.doubleCheck ? `Are you sure?` : `Delete all your data`}
+						{dc.doubleCheck ? `Tem certeza?` : `Apagar todos os seus dados`}
 					</Icon>
 				</StatusButton>
 			</fetcher.Form>

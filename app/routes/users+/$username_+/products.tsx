@@ -13,17 +13,17 @@ export async function loader({ params }: DataFunctionArgs) {
 			name: true,
 			username: true,
 			image: { select: { id: true } },
-			notes: { select: { id: true, title: true } },
+			products: { select: { id: true, title: true } },
 		},
 		where: { username: params.username },
 	})
 
-	invariantResponse(owner, 'Owner not found', { status: 404 })
+	invariantResponse(owner, 'Responsável não encontrado', { status: 404 })
 
 	return json({ owner })
 }
 
-export default function NotesRoute() {
+export default function ProductsRoute() {
 	const data = useLoaderData<typeof loader>()
 	const user = useOptionalUser()
 	const isOwner = user?.id === data.owner.id
@@ -45,7 +45,7 @@ export default function NotesRoute() {
 								className="h-16 w-16 rounded-full object-cover lg:h-24 lg:w-24"
 							/>
 							<h1 className="text-center text-base font-bold md:text-lg lg:text-left lg:text-2xl">
-								{ownerDisplayName}'s Notes
+								{ownerDisplayName}'s Productos
 							</h1>
 						</Link>
 						<ul className="overflow-y-auto overflow-x-hidden pb-12">
@@ -57,21 +57,21 @@ export default function NotesRoute() {
 											cn(navLinkDefaultClassName, isActive && 'bg-accent')
 										}
 									>
-										<Icon name="plus">New Note</Icon>
+										<Icon name="plus">Novo Produto</Icon>
 									</NavLink>
 								</li>
 							) : null}
-							{data.owner.notes.map(note => (
-								<li key={note.id} className="p-1 pr-0">
+							{data.owner.products.map(product => (
+								<li key={product.id} className="p-1 pr-0">
 									<NavLink
-										to={note.id}
+										to={product.id}
 										preventScrollReset
 										prefetch="intent"
 										className={({ isActive }) =>
 											cn(navLinkDefaultClassName, isActive && 'bg-accent')
 										}
 									>
-										{note.title}
+										{product.title}
 									</NavLink>
 								</li>
 							))}
@@ -91,7 +91,7 @@ export function ErrorBoundary() {
 		<GeneralErrorBoundary
 			statusHandlers={{
 				404: ({ params }) => (
-					<p>No user with the username "{params.username}" exists</p>
+					<p>Não existe um usuário com o nome de usuário: "{params.username}"</p>
 				),
 			}}
 		/>

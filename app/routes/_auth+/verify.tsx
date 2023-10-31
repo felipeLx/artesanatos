@@ -3,7 +3,6 @@ import { parse } from '@conform-to/zod'
 import { json, type DataFunctionArgs } from '@remix-run/node'
 import { z } from 'zod'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
-import { handleVerification as handleChangeEmailVerification } from '#app/routes/settings+/profile.change-email.tsx'
 import { checkHoneypot } from '#app/utils/honeypot.server.ts'
 import { ensurePrimary } from '#app/utils/litefs.server.ts'
 import { getDomainUrl } from '#app/utils/misc.tsx'
@@ -118,17 +117,9 @@ async function validateRequest(
 
 	const { value: submissionValue } = submission
 
-	async function deleteVerification() {
-        return null
-    }
-
 	switch (submissionValue[typeQueryParam]) {
 		case 'reset-password': {
 			return handleResetPasswordVerification({ request, body, submission })
-		}
-		case 'change-email': {
-			await deleteVerification()
-			return handleChangeEmailVerification({ request, body, submission })
 		}
 	}
 }

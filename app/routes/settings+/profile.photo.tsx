@@ -15,14 +15,12 @@ import {
 	useNavigation,
 } from '@remix-run/react'
 import { useState } from 'react'
-import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { z } from 'zod'
 import { ErrorList } from '#app/components/forms.tsx'
 import { Button } from '#app/components/ui/button.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { requireUserId } from '#app/utils/auth.server.ts'
-import { validateCSRF } from '#app/utils/csrf.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import {
 	getUserImgSrc,
@@ -33,7 +31,7 @@ import {
 import { type BreadcrumbHandle } from './profile.tsx'
 
 export const handle: BreadcrumbHandle & SEOHandle = {
-	breadcrumb: <Icon name="avatar">Photo</Icon>,
+	breadcrumb: <Icon name="avatar">Foto</Icon>,
 	getSitemapEntries: () => null,
 }
 
@@ -47,8 +45,8 @@ const NewImageSchema = z.object({
 	intent: z.literal('submit'),
 	photoFile: z
 		.instanceof(File)
-		.refine(file => file.size > 0, 'Image is required')
-		.refine(file => file.size <= MAX_SIZE, 'Image size must be less than 3MB'),
+		.refine(file => file.size > 0, 'Imagem é necessário')
+		.refine(file => file.size <= MAX_SIZE, 'Imagem deve ser menos que 3MB'),
 })
 
 const PhotoFormSchema = z.union([DeleteImageSchema, NewImageSchema])
@@ -64,7 +62,7 @@ export async function loader({ request }: DataFunctionArgs) {
 			image: { select: { id: true } },
 		},
 	})
-	invariantResponse(user, 'User not found', { status: 404 })
+	invariantResponse(user, 'Usuário não encontrado', { status: 404 })
 	return json({ user })
 }
 
@@ -74,7 +72,6 @@ export async function action({ request }: DataFunctionArgs) {
 		request,
 		unstable_createMemoryUploadHandler({ maxPartSize: MAX_SIZE }),
 	)
-	await validateCSRF(formData, request.headers)
 
 	const submission = await parse(formData, {
 		schema: PhotoFormSchema.transform(async data => {
@@ -154,7 +151,6 @@ export default function PhotoRoute() {
 				onReset={() => setNewImageSrc(null)}
 				{...form.props}
 			>
-				<AuthenticityTokenInput />
 				<img
 					src={
 						newImageSrc ?? (data.user ? getUserImgSrc(data.user.image?.id) : '')
@@ -192,7 +188,7 @@ export default function PhotoRoute() {
 						className="cursor-pointer peer-valid:hidden peer-focus-within:ring-4 peer-focus-visible:ring-4"
 					>
 						<label htmlFor={fields.photoFile.id}>
-							<Icon name="pencil-1">Change</Icon>
+							<Icon name="pencil-1">Alterar</Icon>
 						</label>
 					</Button>
 					<StatusButton
@@ -208,14 +204,14 @@ export default function PhotoRoute() {
 								: 'idle'
 						}
 					>
-						Save Photo
+						Salvar a Foto
 					</StatusButton>
 					<Button
 						type="reset"
 						variant="destructive"
 						className="peer-invalid:hidden"
 					>
-						<Icon name="trash">Reset</Icon>
+						<Icon name="trash">Reiniciar</Icon>
 					</Button>
 					{data.user.image?.id ? (
 						<StatusButton
@@ -236,8 +232,8 @@ export default function PhotoRoute() {
 						>
 							<Icon name="trash">
 								{doubleCheckDeleteImage.doubleCheck
-									? 'Are you sure?'
-									: 'Delete'}
+									? 'Você tem certeza?'
+									: 'Apagar'}
 							</Icon>
 						</StatusButton>
 					) : null}

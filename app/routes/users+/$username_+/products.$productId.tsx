@@ -9,7 +9,6 @@ import {
 	type MetaFunction,
 } from '@remix-run/react'
 import { formatDistanceToNow } from 'date-fns'
-import { AuthenticityTokenInput } from 'remix-utils/csrf/react'
 import { z } from 'zod'
 import { GeneralErrorBoundary } from '#app/components/error-boundary.tsx'
 import { floatingToolbarClassName } from '#app/components/floating-toolbar.tsx'
@@ -18,7 +17,6 @@ import { Button } from '#app/components/ui/button.tsx'
 import { Icon } from '#app/components/ui/icon.tsx'
 import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { requireUserId } from '#app/utils/auth.server.ts'
-import { validateCSRF } from '#app/utils/csrf.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import {
 	getNoteImgSrc,
@@ -31,15 +29,15 @@ import {
 } from '#app/utils/permissions.ts'
 import { redirectWithToast } from '#app/utils/toast.server.ts'
 import { useOptionalUser } from '#app/utils/user.ts'
-import { type loader as notesLoader } from './notes.tsx'
+import { type loader as productsLoader } from './products.tsx'
 
 export async function loader({ params }: DataFunctionArgs) {
-	const note = await prisma.note.findUnique({
-		where: { id: params.noteId },
+	const product = await prisma.product.findUnique({
+		where: { id: params.productId },
 		select: {
 			id: true,
 			title: true,
-			content: true,
+			description: true,
 			ownerId: true,
 			updatedAt: true,
 			images: {
@@ -48,29 +46,38 @@ export async function loader({ params }: DataFunctionArgs) {
 					altText: true,
 				},
 			},
+			productVariation: {
+				select: {
+					id: true,
+					price: true,
+					quantity: true,
+					weight: true,
+					width: true,
+					height: true,
+				},
+			}
 		},
 	})
 
-	invariantResponse(note, 'Not found', { status: 404 })
+	invariantResponse(product, 'Not found', { status: 404 })
 
-	const date = new Date(note.updatedAt)
+	const date = new Date(product.updatedAt || new Date())
 	const timeAgo = formatDistanceToNow(date)
 
 	return json({
-		note,
+		product,
 		timeAgo,
 	})
 }
 
 const DeleteFormSchema = z.object({
-	intent: z.literal('delete-note'),
-	noteId: z.string(),
+	intent: z.literal('delete-product'),
+	productId: z.string(),
 })
 
 export async function action({ request }: DataFunctionArgs) {
 	const userId = await requireUserId(request)
 	const formData = await request.formData()
-	await validateCSRF(formData, request.headers)
 	const submission = parse(formData, {
 		schema: DeleteFormSchema,
 	})
@@ -81,45 +88,45 @@ export async function action({ request }: DataFunctionArgs) {
 		return json({ status: 'error', submission } as const, { status: 400 })
 	}
 
-	const { noteId } = submission.value
+	const { productId } = submission.value
 
-	const note = await prisma.note.findFirst({
+	const product = await prisma.product.findFirst({
 		select: { id: true, ownerId: true, owner: { select: { username: true } } },
-		where: { id: noteId },
+		where: { id: productId },
 	})
-	invariantResponse(note, 'Not found', { status: 404 })
+	invariantResponse(product, 'Não existe', { status: 404 })
 
-	const isOwner = note.ownerId === userId
+	const isOwner = product.ownerId === userId
 	await requireUserWithPermission(
 		request,
-		isOwner ? `delete:note:own` : `delete:note:any`,
+		isOwner ? `delete:product:own` : `delete:product:any`,
 	)
 
-	await prisma.note.delete({ where: { id: note.id } })
+	await prisma.product.delete({ where: { id: product.id } })
 
-	return redirectWithToast(`/users/${note.owner.username}/notes`, {
+	return redirectWithToast(`/users/${product.owner.username}/products`, {
 		type: 'success',
-		title: 'Success',
-		description: 'Your note has been deleted.',
+		title: 'Successo',
+		description: 'Seu produto foi apagado.',
 	})
 }
 
-export default function NoteRoute() {
+export default function ProductRoute() {
 	const data = useLoaderData<typeof loader>()
 	const user = useOptionalUser()
-	const isOwner = user?.id === data.note.ownerId
+	const isOwner = user?.id === data.product.ownerId
 	const canDelete = userHasPermission(
 		user,
-		isOwner ? `delete:note:own` : `delete:note:any`,
+		isOwner ? `delete:product:own` : `delete:product:any`,
 	)
 	const displayBar = canDelete || isOwner
 
 	return (
 		<div className="absolute inset-0 flex flex-col px-10">
-			<h2 className="mb-2 pt-12 text-h2 lg:mb-6">{data.note.title}</h2>
+			<h2 className="mb-2 pt-12 text-h2 lg:mb-6">{data.product.title}</h2>
 			<div className={`${displayBar ? 'pb-24' : 'pb-12'} overflow-y-auto`}>
 				<ul className="flex flex-wrap gap-5 py-5">
-					{data.note.images.map(image => (
+					{data.product.images.map(image => (
 						<li key={image.id}>
 							<a href={getNoteImgSrc(image.id)}>
 								<img
@@ -132,7 +139,7 @@ export default function NoteRoute() {
 					))}
 				</ul>
 				<p className="whitespace-break-spaces text-sm md:text-lg">
-					{data.note.content}
+					{data.product.description}
 				</p>
 			</div>
 			{displayBar ? (
@@ -143,14 +150,14 @@ export default function NoteRoute() {
 						</Icon>
 					</span>
 					<div className="grid flex-1 grid-cols-2 justify-end gap-2 min-[525px]:flex md:gap-4">
-						{canDelete ? <DeleteNote id={data.note.id} /> : null}
+						{canDelete ? <DeleteProduct id={data.product.id} /> : null}
 						<Button
 							asChild
 							className="min-[525px]:max-md:aspect-square min-[525px]:max-md:px-0"
 						>
 							<Link to="edit">
 								<Icon name="pencil-1" className="scale-125 max-md:scale-150">
-									<span className="max-md:hidden">Edit</span>
+									<span className="max-md:hidden">Editar</span>
 								</Icon>
 							</Link>
 						</Button>
@@ -161,29 +168,28 @@ export default function NoteRoute() {
 	)
 }
 
-export function DeleteNote({ id }: { id: string }) {
+export function DeleteProduct({ id }: { id: string }) {
 	const actionData = useActionData<typeof action>()
 	const isPending = useIsPending()
 	const [form] = useForm({
-		id: 'delete-note',
+		id: 'delete-product',
 		lastSubmission: actionData?.submission,
 	})
 
 	return (
 		<Form method="POST" {...form.props}>
-			<AuthenticityTokenInput />
-			<input type="hidden" name="noteId" value={id} />
+			<input type="hidden" name="productId" value={id} />
 			<StatusButton
 				type="submit"
 				name="intent"
-				value="delete-note"
+				value="delete-product"
 				variant="destructive"
 				status={isPending ? 'pending' : actionData?.status ?? 'idle'}
 				disabled={isPending}
 				className="w-full max-md:aspect-square max-md:px-0"
 			>
 				<Icon name="trash" className="scale-125 max-md:scale-150">
-					<span className="max-md:hidden">Delete</span>
+					<span className="max-md:hidden">Apagar</span>
 				</Icon>
 			</StatusButton>
 			<ErrorList errors={form.errors} id={form.errorId} />
@@ -193,22 +199,22 @@ export function DeleteNote({ id }: { id: string }) {
 
 export const meta: MetaFunction<
 	typeof loader,
-	{ 'routes/users+/$username_+/notes': typeof notesLoader }
+	{ 'routes/users+/$username_+/products': typeof productsLoader }
 > = ({ data, params, matches }) => {
-	const notesMatch = matches.find(
-		m => m.id === 'routes/users+/$username_+/notes',
+	const productsMatch = matches.find(
+		m => m.id === 'routes/users+/$username_+/products',
 	)
-	const displayName = notesMatch?.data?.owner.name ?? params.username
-	const noteTitle = data?.note.title ?? 'Note'
-	const noteContentsSummary =
-		data && data.note.content.length > 100
-			? data?.note.content.slice(0, 97) + '...'
-			: 'No content'
+	const displayName = productsMatch?.data?.owner.name ?? params.username
+	const productTitle = data?.product.title ?? 'Produto'
+	const productContentsSummary =
+		data && data.product.description.length > 100
+			? data?.product.description.slice(0, 97) + '...'
+			: 'Sem descrição'
 	return [
-		{ title: `${noteTitle} | ${displayName}'s Notes | Artesanatos da Zizi` },
+		{ title: `${productTitle} | ${displayName}'s Produtos | Artesanatos da Zizi` },
 		{
 			name: 'description',
-			content: noteContentsSummary,
+			content: productContentsSummary,
 		},
 	]
 }
@@ -217,9 +223,9 @@ export function ErrorBoundary() {
 	return (
 		<GeneralErrorBoundary
 			statusHandlers={{
-				403: () => <p>You are not allowed to do that</p>,
+				403: () => <p>Você não tem permissão para fazer isso</p>,
 				404: ({ params }) => (
-					<p>No note with the id "{params.noteId}" exists</p>
+					<p>Não há produto com esse id "{params.productId}"</p>
 				),
 			}}
 		/>

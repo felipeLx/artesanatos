@@ -14,7 +14,6 @@ import {
 	requireUserId,
 	verifyUserPassword,
 } from '#app/utils/auth.server.ts'
-import { validateCSRF } from '#app/utils/csrf.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import { useIsPending } from '#app/utils/misc.tsx'
 import { redirectWithToast } from '#app/utils/toast.server.ts'
@@ -22,7 +21,7 @@ import { PasswordSchema } from '#app/utils/user-validation.ts'
 import { type BreadcrumbHandle } from './profile.tsx'
 
 export const handle: BreadcrumbHandle & SEOHandle = {
-	breadcrumb: <Icon name="dots-horizontal">Password</Icon>,
+	breadcrumb: <Icon name="dots-horizontal">Senha</Icon>,
 	getSitemapEntries: () => null,
 }
 
@@ -62,7 +61,6 @@ export async function action({ request }: DataFunctionArgs) {
 	const userId = await requireUserId(request)
 	await requirePassword(userId)
 	const formData = await request.formData()
-	await validateCSRF(formData, request.headers)
 	const submission = await parse(formData, {
 		async: true,
 		schema: ChangePasswordForm.superRefine(
@@ -109,8 +107,8 @@ export async function action({ request }: DataFunctionArgs) {
 		`/settings/profile`,
 		{
 			type: 'success',
-			title: 'Password Changed',
-			description: 'Your password has been changed.',
+			title: 'Senha alterada',
+			description: 'Sua senha foi alterada.',
 		},
 		{ status: 302 },
 	)
@@ -134,12 +132,12 @@ export default function ChangePasswordRoute() {
 		<Form method="POST" {...form.props} className="mx-auto max-w-md">
 			<AuthenticityTokenInput />
 			<Field
-				labelProps={{ children: 'Current Password' }}
+				labelProps={{ children: 'Senha atual' }}
 				inputProps={conform.input(fields.currentPassword, { type: 'password' })}
 				errors={fields.currentPassword.errors}
 			/>
 			<Field
-				labelProps={{ children: 'New Password' }}
+				labelProps={{ children: 'Nova senha' }}
 				inputProps={conform.input(fields.newPassword, { type: 'password' })}
 				errors={fields.newPassword.errors}
 			/>
@@ -153,13 +151,13 @@ export default function ChangePasswordRoute() {
 			<ErrorList id={form.errorId} errors={form.errors} />
 			<div className="grid w-full grid-cols-2 gap-6">
 				<Button variant="secondary" asChild>
-					<Link to="..">Cancel</Link>
+					<Link to="..">Cancelar</Link>
 				</Button>
 				<StatusButton
 					type="submit"
 					status={isPending ? 'pending' : actionData?.status ?? 'idle'}
 				>
-					Change Password
+					Alterar Senha
 				</StatusButton>
 			</div>
 		</Form>
