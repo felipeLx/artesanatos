@@ -9,7 +9,7 @@ export function getUserImgSrc(imageId?: string | null) {
 	return imageId ? `/resources/user-images/${imageId}` : '/img/user.png'
 }
 
-export function getNoteImgSrc(imageId: string) {
+export function getProductImgSrc(imageId: string) {
 	return `/resources/product-images/${imageId}`
 }
 

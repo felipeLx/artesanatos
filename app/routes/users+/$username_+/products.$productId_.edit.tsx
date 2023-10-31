@@ -13,24 +13,35 @@ export async function loader({ params, request }: DataFunctionArgs) {
 		select: {
 			id: true,
 			title: true,
-			content: true,
+			description: true,
 			images: {
 				select: {
 					id: true,
 					altText: true,
 				},
 			},
+			productVariation: {
+				select: {
+					id: true,
+					productStripeId: true,
+					price: true,
+					quantity: true,
+					weight: true,
+					width: true,
+					height: true,
+				},
+			}
 		},
 		where: {
 			id: params.productId,
 			ownerId: userId,
 		},
 	})
-	invariantResponse(product, 'Not found', { status: 404 })
+	invariantResponse(product, 'Não existe', { status: 404 })
 	return json({ product: product })
 }
 
-export default function NoteEdit() {
+export default function ProductEdit() {
 	const data = useLoaderData<typeof loader>()
 
 	return <ProductEditor product={data.product} />

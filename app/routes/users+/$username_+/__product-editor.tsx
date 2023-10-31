@@ -8,7 +8,7 @@ import {
 } from '@conform-to/react'
 import { getFieldsetConstraint, parse } from '@conform-to/zod'
 import { createId as cuid } from '@paralleldrive/cuid2'
-import { ProductVariation, type Product, type ProductImage } from '@prisma/client'
+import { type ProductVariation, type Product, type ProductImage } from '@prisma/client'
 import {
 	unstable_createMemoryUploadHandler as createMemoryUploadHandler,
 	json,
@@ -45,8 +45,8 @@ const ProductVariationFieldsetSchema = z.object({
 	price: z.number().optional(),
 	quantity: z.number().optional(),
 	weight: z.number().optional(),
-	width: z.number().optional(),
 	height: z.number().optional(),
+	width: z.number().optional(),
 })
 const ImageFieldsetSchema = z.object({
 	id: z.string().optional(),
@@ -60,11 +60,18 @@ const ImageFieldsetSchema = z.object({
 })
 
 type ImageFieldset = z.infer<typeof ImageFieldsetSchema>
+type ProductVariationFieldset = z.infer<typeof ProductVariationFieldsetSchema>
 
 function imageHasFile(
 	image: ImageFieldset,
 ): image is ImageFieldset & { file: NonNullable<ImageFieldset['file']> } {
 	return Boolean(image.file?.size && image.file?.size > 0)
+}
+
+function ProductVariationHaveField(
+	variation: ProductVariationFieldset,
+): variation is ProductVariationFieldset {
+	return Boolean(variation.productStripeId && variation.price && variation.quantity && variation.weight && variation.width && variation.height) 
 }
 
 function imageHasId(
@@ -78,6 +85,7 @@ const ProductEditorSchema = z.object({
 	title: z.string().min(titleMinLength).max(titleMaxLength),
 	description: z.string().min(descriptionMinLength).max(descriptionMaxLength),
 	images: z.array(ImageFieldsetSchema).max(5).optional(),
+	productVariation: z.array(ProductVariationFieldsetSchema).max(1).optional(),
 })
 
 export async function action({ request }: DataFunctionArgs) {
@@ -102,7 +110,7 @@ export async function action({ request }: DataFunctionArgs) {
 					message: 'Produto não encontrado',
 				})
 			}
-		}).transform(async ({ images = [], ...data }) => {
+		}).transform(async ({ images = [], productVariation = [], ...data }) => {
 			return {
 				...data,
 				imageUpdates: await Promise.all(
@@ -111,7 +119,7 @@ export async function action({ request }: DataFunctionArgs) {
 							return {
 								id: i.id,
 								altText: i.altText,
-								descriptionType: i.file.type,
+								contentType: i.file.type,
 								blob: Buffer.from(await i.file.arrayBuffer()),
 							}
 						} else {
@@ -129,11 +137,43 @@ export async function action({ request }: DataFunctionArgs) {
 						.map(async image => {
 							return {
 								altText: image.altText,
-								descriptionType: image.file.type,
+								contentType: image.file.type,
 								blob: Buffer.from(await image.file.arrayBuffer()),
 							}
 						}),
 				),
+				productVariationUpdates: await Promise.all(
+					productVariation.filter(ProductVariationHaveField).map(async prVariation => {
+						if (prVariation.id) {
+							return {
+								id: prVariation.id!,
+								productStripeId: prVariation.productStripeId!,
+								price: prVariation.price!,
+								quantity: prVariation.quantity!,
+								weight: prVariation.weight!,
+								height: prVariation.height!,
+								width: prVariation.width!,
+							}
+						}
+					})
+
+				),
+				newProductVariation: await Promise.all(
+					productVariation
+						.filter(ProductVariationHaveField)
+						.filter(i => !i.id)
+						.map(async prVariation => {
+							return {
+								productStripeId: prVariation.productStripeId!,
+								price: prVariation.price!,
+								quantity: prVariation.quantity!,
+								weight: prVariation.weight!,
+								height: prVariation.height!,
+								width: prVariation.width!,
+							}
+						})
+				),
+
 			}
 		}),
 		async: true,
@@ -151,10 +191,10 @@ export async function action({ request }: DataFunctionArgs) {
 		id: productId,
 		title,
 		description,
-		productVariation = [],
-		newProductVariation = [],
 		imageUpdates = [],
 		newImages = [],
+		productVariationUpdates = [],
+		newProductVariation = [],
 	} = submission.value
 
 	const updatedProduct = await prisma.product.upsert({
@@ -171,10 +211,10 @@ export async function action({ request }: DataFunctionArgs) {
 			title,
 			description,
 			productVariation: {
-				deleteMany: { id: { notIn: productVariation.map(i => i.id) } },
-				updateMany: productVariation.map(updates => ({
-					where: { id: updates.id },
-					data: { ...updates, id: updates.id },
+				deleteMany: { id: { notIn: productVariationUpdates!.map(i => i!.id!) } },
+				updateMany: productVariationUpdates.map(updates => ({
+					where: { id: updates!.id! },
+					data: { ...updates, id: updates!.id! },
 				})),
 				create: newProductVariation,
 			},
@@ -202,7 +242,7 @@ export function ProductEditor({
 			images: Array<Pick<ProductImage, 'id' | 'altText'>>
 		} & {
 			productVariation: Array<
-				Pick<ProductVariation, 'id' | 'productStripeId' | 'price' | 'quantity' | 'weight' | 'width' | 'height'>
+				Pick<ProductVariation, 'id' | 'productStripeId' | 'price' | 'quantity' | 'weight' | 'height'| 'width' >
 			>
 		}
 	>
@@ -220,8 +260,8 @@ export function ProductEditor({
 		defaultValue: {
 			title: product?.title ?? '',
 			description: product?.description ?? '',
-			productVariation: product?.productVariation ?? [{}],
 			images: product?.images ?? [{}],
+			productVariation: product?.productVariation ?? [{}],
 		},
 	})
 	const imageList = useFieldList(form.ref, fields.images)
@@ -292,14 +332,14 @@ export function ProductEditor({
 					<div>
 						<Label>Variações</Label>
 						<ul className="flex flex-col gap-4">
-							{imageList.map((productVariation, index) => (
+							{productVariationList.map((productVariation, index) => (
 								<li
 									key={productVariation.key}
 									className="relative border-b-2 border-muted-foreground"
 								>
 									<button
 										className="absolute right-0 top-0 text-foreground-destructive"
-										{...list.remove(fields.productVariation.productStripeId, { index })}
+										{...list.remove(fields.productVariation.name, { index })}
 									>
 										<span aria-hidden>
 											<Icon name="cross-1" />
@@ -313,7 +353,7 @@ export function ProductEditor({
 					</div>
 					<Button
 						className="mt-3"
-						{...list.append(fields.productVariation.productStripeId, { defaultValue: {} })}
+						{...list.append(fields.productVariation.name, { defaultValue: {} })}
 					>
 						<span aria-hidden>
 							<Icon name="plus">Variação</Icon>
@@ -341,104 +381,66 @@ export function ProductEditor({
 	)
 }
 
-function ProductVariationConfig(config: FieldConfig<z.infer<typeof ProductVariationFieldsetSchema>>) {
+// not exist the type FieldConfig for the function below
+function ProductVariationConfig(config: any) {
 	const ref = useRef<HTMLFieldSetElement>(null)
 	const fields = useFieldset(ref, config)
-	const existingProductVariation = Boolean(fields.id.defaultValue)
-	const [productStripeId, setProductStripeId] = useState(fields.productStripeId.defaultValue || '')
-	const [price, setPrice] = useState(fields.price.defaultValue || '')
-	const [quantity, setQuantity] = useState(fields.quantity.defaultValue || '')
-	const [weight, setWeight] = useState(fields.weight.defaultValue || '')
-	const [width, setWidth] = useState(fields.width.defaultValue || '')
-	const [height, setHeight] = useState(fields.height.defaultValue || '')
-
+	
 	return (
 		<fieldset
 			ref={ref}
 			aria-invalid={Boolean(config.errors?.length) || undefined}
 			aria-describedby={config.errors?.length ? config.errorId : undefined}
 		>
-			<div className="flex gap-3">
-				<div className="w-32">
-					<div className="relative h-32 w-32">
-						<label
-							htmlFor={fields.file.id}
-							className={cn('group absolute h-32 w-32 rounded-lg', {
-								'bg-accent opacity-40 focus-within:opacity-100 hover:opacity-100':
-									!previewProductVariation,
-								'cursor-pointer focus-within:ring-4': !existingProductVariation,
-							})}
-						>
-							{previewProductVariation ? (
-								<div className="relative">
-									<img
-										src={previewImage}
-										alt={altText ?? ''}
-										className="h-32 w-32 rounded-lg object-cover"
-									/>
-									{existingImage ? null : (
-										<div className="pointer-events-none absolute -right-0.5 -top-0.5 rotate-12 rounded-sm bg-secondary px-2 py-1 text-xs text-secondary-foreground shadow-md">
-											new
-										</div>
-									)}
-								</div>
-							) : (
-								<div className="flex h-32 w-32 items-center justify-center rounded-lg border border-muted-foreground text-4xl text-muted-foreground">
-									<Icon name="plus" />
-								</div>
-							)}
-							{existingImage ? (
-								<input
-									{...conform.input(fields.id, {
-										type: 'hidden',
-										ariaAttributes: true,
-									})}
-								/>
-							) : null}
-							<input
-								aria-label="Image"
-								className="absolute left-0 top-0 z-0 h-32 w-32 cursor-pointer opacity-0"
-								onChange={event => {
-									const file = event.target.files?.[0]
-
-									if (file) {
-										const reader = new FileReader()
-										reader.onloadend = () => {
-											setPreviewImage(reader.result as string)
-										}
-										reader.readAsDataURL(file)
-									} else {
-										setPreviewImage(null)
-									}
-								}}
-								accept="image/*"
-								{...conform.input(fields.file, {
-									type: 'file',
-									ariaAttributes: true,
-								})}
-							/>
-						</label>
-					</div>
-					<div className="min-h-[32px] px-4 pb-3 pt-1">
-						<ErrorList id={fields.file.errorId} errors={fields.file.errors} />
-					</div>
-				</div>
-				<div className="flex-1">
-					<Label htmlFor={fields.altText.id}>Texto Alt</Label>
-					<Textarea
-						onChange={e => setAltText(e.currentTarget.value)}
-						{...conform.textarea(fields.altText, { ariaAttributes: true })}
-					/>
-					<div className="min-h-[32px] px-4 pb-3 pt-1">
-						<ErrorList
-							id={fields.altText.errorId}
-							errors={fields.altText.errors}
-						/>
-					</div>
-				</div>
-			</div>
-			<div className="min-h-[32px] px-4 pb-3 pt-1">
-				<ErrorList id={config.errorId} errors={config.errors} />
+			<div className="flex flex-col gap-1">
+				<Field
+					labelProps={{ children: 'ID do Produto no Stripe' }}
+					inputProps={{
+						autoFocus: true,
+						...conform.input(fields.productStripeId, { ariaAttributes: true }),
+					}}
+					errors={fields.productStripeId.errors}
+				/>
+				<Field
+					labelProps={{ children: 'Preço' }}
+					inputProps={{
+						autoFocus: true,
+						...conform.input(fields.price, { ariaAttributes: true }),
+					}}
+					errors={fields.price.errors}
+				/>
+				<Field
+					labelProps={{ children: 'Quantidade' }}
+					inputProps={{
+						autoFocus: true,
+						...conform.input(fields.quantity, { ariaAttributes: true }),
+					}}
+					errors={fields.quantity.errors}
+				/>
+				<Field
+					labelProps={{ children: 'Peso' }}
+					inputProps={{
+						autoFocus: true,
+						...conform.input(fields.weight, { ariaAttributes: true }),
+					}}
+					errors={fields.weight.errors}
+				/>
+				<Field
+					labelProps={{ children: 'Largura' }}
+					inputProps={{
+						autoFocus: true,
+						...conform.input(fields.width, { ariaAttributes: true }),
+					}}
+					errors={fields.width.errors}
+				/>
+				<Field
+					labelProps={{ children: 'Altura' }}
+					inputProps={{
+						autoFocus: true,
+						...conform.input(fields.height, { ariaAttributes: true }),
+					}}
+					errors={fields.height.errors}
+				/>
 			</div>
 		</fieldset>
 	)

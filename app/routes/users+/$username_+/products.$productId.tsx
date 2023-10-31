@@ -19,7 +19,7 @@ import { StatusButton } from '#app/components/ui/status-button.tsx'
 import { requireUserId } from '#app/utils/auth.server.ts'
 import { prisma } from '#app/utils/db.server.ts'
 import {
-	getNoteImgSrc,
+	getProductImgSrc,
 	invariantResponse,
 	useIsPending,
 } from '#app/utils/misc.tsx'
@@ -49,6 +49,7 @@ export async function loader({ params }: DataFunctionArgs) {
 			productVariation: {
 				select: {
 					id: true,
+					productStripeId: true,
 					price: true,
 					quantity: true,
 					weight: true,
@@ -59,7 +60,7 @@ export async function loader({ params }: DataFunctionArgs) {
 		},
 	})
 
-	invariantResponse(product, 'Not found', { status: 404 })
+	invariantResponse(product, 'Não existe', { status: 404 })
 
 	const date = new Date(product.updatedAt || new Date())
 	const timeAgo = formatDistanceToNow(date)
@@ -124,13 +125,16 @@ export default function ProductRoute() {
 	return (
 		<div className="absolute inset-0 flex flex-col px-10">
 			<h2 className="mb-2 pt-12 text-h2 lg:mb-6">{data.product.title}</h2>
+			<p className="whitespace-break-spaces text-sm md:text-lg">
+				{data.product.description}
+			</p>
 			<div className={`${displayBar ? 'pb-24' : 'pb-12'} overflow-y-auto`}>
 				<ul className="flex flex-wrap gap-5 py-5">
 					{data.product.images.map(image => (
 						<li key={image.id}>
-							<a href={getNoteImgSrc(image.id)}>
+							<a href={getProductImgSrc(image.id)}>
 								<img
-									src={getNoteImgSrc(image.id)}
+									src={getProductImgSrc(image.id)}
 									alt={image.altText ?? ''}
 									className="h-32 w-32 rounded-lg object-cover"
 								/>
@@ -138,9 +142,19 @@ export default function ProductRoute() {
 						</li>
 					))}
 				</ul>
-				<p className="whitespace-break-spaces text-sm md:text-lg">
-					{data.product.description}
-				</p>
+			</div>
+			<div className='pb-12 flex gap-12'>
+				<ul className="flex flex-wrap gap-5 py-5">
+					{data.product.productVariation.map(prVariation => (
+						<li key={prVariation.id}>
+							<p className="text-sm md:text-lg">{prVariation.productStripeId}</p>
+							<p className="text-sm md:text-lg">R$ {prVariation.price/100}</p>
+							<p className="text-sm md:text-lg">{prVariation.quantity}</p>
+							<p className="text-sm md:text-lg">{prVariation.weight/1000} kg</p>
+							<p className="text-sm md:text-lg">{prVariation.width} cm</p>
+						</li>
+					))}
+				</ul>
 			</div>
 			{displayBar ? (
 				<div className={floatingToolbarClassName}>
