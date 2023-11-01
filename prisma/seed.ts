@@ -86,19 +86,28 @@ async function seed() {
 
 	console.time(`🐨 Created Options`)
 	const productOptions = ['artist', 'catholic', 'lotus', 'flower', 'mirrow', 'doors', 'other']
-
+	
     for (const name of productOptions) {
-        await prisma.optionsVariation.create({ data: { name } })
+		await prisma.optionsVariation.create({ 
+			data: { 
+				name,
+			}
+		})
     }
 
 	const productColors = ['white','black','yellow','blue','red','green','purple','pink','orange','gray','brown','gold','silver','other']
+	const productHexColors = ['#FFFFFF','#000000','#FFFF00','#0000FF','#FF0000','#008000','#800080','#FFC0CB','#FFA500','#808080','#A52A2A','#FFD700','#C0C0C0','other']
 
     for (const name of productColors) {
-        await prisma.colorVariation.create({ data: { name } })
+		for (const hexCode of productHexColors) {
+			await prisma.colorVariation.create({ data: { name, hexCode } })
+		}
     }
 	console.timeEnd(`👤 Created Options`)
 
 	console.time(`🐨 Created admin user "felps77"`)
+
+	// const githubUser = await insertGitHubUser('MOCK_CODE_GITHUB_KODY')
 
 	const toUploadImages = await promiseHash({
 		kodyUser: img({ filepath: './tests/fixtures/images/user/kody.png' }),
@@ -155,8 +164,6 @@ async function seed() {
 			filepath: './tests/fixtures/images/mandalas/20.png',
 		}),
 	})  
-
-	// const githubUser = await insertGitHubUser('MOCK_CODE_GITHUB_KODY')
 
 	await prisma.user.create({
 		select: { id: true },
@@ -373,7 +380,7 @@ async function seed() {
 			},
 		},
 	})
-	console.timeEnd(`🐨 Created admin user "kody"`)
+	console.timeEnd(`Created admin user "felps77"`)
 
 	console.timeEnd(`🌱 Database has been seeded`)
 }
